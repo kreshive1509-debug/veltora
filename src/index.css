@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-space: "Space Grotesk", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #05071A;
+}
+::-webkit-scrollbar-thumb {
+  background: #7B2FFF;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00F5FF;
+}
+
+/* Base Setup */
+html {
+  scroll-behavior: smooth;
+  background-color: #05071A;
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Frosted Glass Theme Classes */
+.glass {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.glass-no-round {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0px !important;
+}
+
+.neon-text {
+  background: linear-gradient(to bottom, #FFFFFF, #A452F5) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.neon-rod {
+  background: linear-gradient(90deg, #7B2FFF, #00F5FF, #7B2FFF) !important;
+  box-shadow: 0 0 30px rgba(123, 47, 255, 0.6), 0 0 60px rgba(0, 245, 255, 0.3) !important;
+}
+
+.card-shadow {
+  box-shadow: 0 8px 32px rgba(123, 47, 255, 0.15) !important;
+}
+
+.hanging-wire {
+  background: linear-gradient(to bottom, #A855F7, transparent) !important;
+}
+
+.spin-tilt {
+  transform: perspective(1000px) rotateY(15deg) rotateX(5deg) !important;
+}
+
+.floating-btn {
+  background: linear-gradient(135deg, #7B2FFF, #00F5FF) !important;
+  box-shadow: 0 0 20px rgba(123, 47, 255, 0.5) !important;
+}
+
+/* Custom Cursor */
+@media (pointer: fine) {
+  .custom-cursor-dot {
+    width: 6px;
+    height: 6px;
+    background: #00F5FF;
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s;
+  }
+  .custom-cursor-ring {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid #7B2FFF;
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s ease-out, border-color 0.2s;
+  }
+  .cursor-hover .custom-cursor-ring {
+    transform: translate(-50%, -50%) scale(1.5);
+    border-color: #FF2D78;
+    background-color: rgba(255, 45, 120, 0.05);
+  }
+  .cursor-hover .custom-cursor-dot {
+    background-color: #FF2D78;
+  }
+}
+
+/* 3D Glass Spin Cards Animations */
+@keyframes spinPerspective {
+  0% {
+    transform: perspective(1000px) rotateX(2deg) rotateY(0deg);
+  }
+  25% {
+    transform: perspective(1000px) rotateX(-2deg) rotateY(6deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateX(2deg) rotateY(0deg);
+  }
+  75% {
+    transform: perspective(1000px) rotateX(-2deg) rotateY(-6deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateX(2deg) rotateY(0deg);
+  }
+}
+
+@keyframes floatY {
+  0% {
+    margin-top: 0px;
+  }
+  50% {
+    margin-top: -12px;
+  }
+  100% {
+    margin-top: 0px;
+  }
+}
+
+.spin-card-1 {
+  animation: spinPerspective 7s infinite ease-in-out 0s, floatY 4s infinite ease-in-out 0s;
+}
+.spin-card-2 {
+  animation: spinPerspective 7s infinite ease-in-out 1.5s, floatY 4s infinite ease-in-out 1s;
+}
+.spin-card-3 {
+  animation: spinPerspective 7s infinite ease-in-out 3s, floatY 4s infinite ease-in-out 2s;
+}
+.spin-card-4 {
+  animation: spinPerspective 7s infinite ease-in-out 4.5s, floatY 4s infinite ease-in-out 3s;
+}
+
+.spin-card-pause:hover {
+  animation-play-state: paused;
+}
+
+/* Shimmer sweep effect */
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.13) 30%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.13) 70%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  transition: all 0s;
+  pointer-events: none;
+}
+.shimmer-effect:hover::after {
+  left: 130%;
+  transition: all 0.9s ease-out;
+}
+
+/* Hanging Pendulum Swing Animation */
+@keyframes pendulumSwing {
+  0% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+  100% {
+    transform: rotate(-3.5deg);
+  }
+}
+
+.hanging-swing {
+  transform-origin: top center;
+}
+
+/* Aurora background blobs */
+@keyframes blobFloat {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.15);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.aurora-blob-1 {
+  animation: blobFloat 15s infinite ease-in-out;
+}
+.aurora-blob-2 {
+  animation: blobFloat 18s infinite ease-in-out 2s;
+}
+.aurora-blob-3 {
+  animation: blobFloat 12s infinite ease-in-out 4s;
+}
+
+/* Glow Pulse Keyframes */
+@keyframes glowPulsePurple {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(123, 47, 255, 0.5), 0 0 20px rgba(123, 47, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(123, 47, 255, 0.8), 0 0 35px rgba(123, 47, 255, 0.4);
+  }
+}
+@keyframes glowPulseCyan {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 245, 255, 0.5), 0 0 20px rgba(0, 245, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 245, 255, 0.8), 0 0 35px rgba(0, 245, 255, 0.4);
+  }
+}
+
+.purple-glow-btn {
+  animation: glowPulsePurple 3s infinite ease-in-out;
+}
+
+.cyan-glow-btn {
+  animation: glowPulseCyan 3s infinite ease-in-out;
+}
+
+/* 3D Rotate Gem Animation */
+@keyframes rotGem {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  100% {
+    transform: rotateX(360deg) rotateY(360deg) rotateZ(180deg);
+  }
+}
+.gem-3d {
+  animation: rotGem 20s infinite linear;
+}
+
+/* Card Flip 3D classes */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Custom fade animation */
+.scroll-fade-in {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.scroll-fade-in.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
