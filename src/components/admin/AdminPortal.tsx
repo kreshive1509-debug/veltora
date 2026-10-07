@@ -64,6 +64,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         <div className="max-w-6xl mx-auto">
           {currentTab === 'dashboard' && <AdminDashboard onNavigateTab={setCurrentTab} />}
           {currentTab === 'branding' && <AdminBrandAppearance />}
+          {currentTab === 'hero' && <AdminHeroSettings />}
           {currentTab === 'homepage' && <AdminSections />}
           {currentTab === 'navigation' && <AdminNavigation />}
           {currentTab === 'services' && <AdminServices />}

@@ -33,6 +33,7 @@ import {
 export type AdminTab =
   | 'dashboard'
   | 'branding'
+  | 'hero'
   | 'homepage'
   | 'navigation'
   | 'services'
@@ -77,6 +78,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { id: 'dashboard', label: 'Overview Dashboard', icon: LayoutDashboard },
     { id: 'enquiries', label: 'Client Enquiries', icon: Inbox, count: enquiriesCount },
     { id: 'branding', label: 'Brand & Appearance', icon: Palette },
+    { id: 'hero', label: 'Hero & Background', icon: Sparkles },
     { id: 'homepage', label: 'Homepage Builder', icon: Layers },
     { id: 'navigation', label: 'Navigation & Header', icon: MenuIcon },
     { id: 'services', label: 'Services & Specs', icon: Code2 },
