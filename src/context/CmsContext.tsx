@@ -39,7 +39,6 @@ import {
   initialHeroSettings,
   initialHomepageSections,
   initialCampaigns,
-  initialLeadership,
   initialTeamMembers,
   initialServices,
   initialProjects,
@@ -155,8 +154,8 @@ interface CmsContextType {
   deleteCampaign: (id: string) => Promise<void>;
 
   // Leadership
-  updateLeadership: (id: string, leader: Partial<Leadership>) => Promise<void>;
-  addLeadership: (leader: Omit<Leadership, 'id'>) => Promise<void>;
+  updateLeadership: (id: string, leader: Partial<Leadership>) => Promise<Leadership>;
+  addLeadership: (leader: Omit<Leadership, 'id'>) => Promise<Leadership>;
   deleteLeadership: (id: string) => Promise<void>;
 
   // Team
@@ -258,7 +257,7 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   const [heroSettings, setHeroSettings] = useState<HeroSettings>(initialHeroSettings);
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(initialHomepageSections);
   const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>(initialCampaigns);
-  const [leadership, setLeadership] = useState<Leadership[]>(initialLeadership);
+  const [leadership, setLeadership] = useState<Leadership[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [services, setServices] = useState<Service[]>(initialServices);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
@@ -543,21 +542,27 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   };
 
   // Leadership
-  const addLeadership = async (leader: Omit<Leadership, 'id'>) => {
+  const addLeadership = async (leader: Omit<Leadership, 'id'>): Promise<Leadership> => {
     const created = await leadershipService.addLeadership(leader);
-    setLeadership((prev) => [...prev, created]);
+    setLeadership((prev) => [...prev, created].sort((a, b) => a.displayOrder - b.displayOrder));
     logAction('CREATE', 'Leadership', `Added leader "${leader.name}"`, created.id);
+    return created;
   };
 
-  const updateLeadership = async (id: string, updates: Partial<Leadership>) => {
-    setLeadership((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)));
-    await leadershipService.updateLeadership(id, updates);
+  const updateLeadership = async (id: string, updates: Partial<Leadership>): Promise<Leadership> => {
+    const updated = await leadershipService.updateLeadership(id, updates);
+    setLeadership((prev) =>
+      prev
+        .map((l) => (l.id === id ? updated : l))
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+    );
     logAction('UPDATE', 'Leadership', `Updated leadership profile`, id);
+    return updated;
   };
 
   const deleteLeadership = async (id: string) => {
-    setLeadership((prev) => prev.filter((l) => l.id !== id));
     await leadershipService.deleteLeadership(id);
+    setLeadership((prev) => prev.filter((l) => l.id !== id));
     logAction('DELETE', 'Leadership', `Removed leadership profile`, id);
   };
 

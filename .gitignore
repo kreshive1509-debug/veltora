@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Supabase local/temp files
+supabase/.temp/
+
+# Local database dumps/backups
+remote_schema.sql
+*.backup.sql

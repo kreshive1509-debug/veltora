@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS public.hero_settings (
 -- 5. HOMEPAGE SECTIONS ORDER & VISIBILITY
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.homepage_sections (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key TEXT UNIQUE NOT NULL,
     label TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS public.homepage_sections (
 -- 6. PROMOTIONAL CAMPAIGNS & BANNERS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.promotional_campaigns (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
     image_url TEXT,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS public.promotional_campaigns (
 -- 7. LEADERSHIP (FOUNDER, CO-FOUNDER, EXECUTIVES)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.leadership (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     role_type TEXT NOT NULL, -- 'founder' | 'co_founder' | 'other'
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS public.leadership (
 -- 8. TEAM MEMBERS & ROLES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.team_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     designation TEXT NOT NULL,
     role TEXT NOT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS public.team_members (
 -- 9. SERVICES & CAPABILITIES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.services (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     short_description TEXT NOT NULL,
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS public.services (
 -- 10. PARTNERS & ALLIANCES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.partners (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     logo_url TEXT NOT NULL,
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS public.partners (
 -- 11. PROJECTS & CASE STUDIES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.projects (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     client TEXT NOT NULL,
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
 -- 12. PROJECT IMAGES (GALLERY PER PROJECT)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.project_images (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
     image_url TEXT NOT NULL,
     alt_text TEXT,
@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS public.project_images (
 -- 13. GALLERY ALBUMS (COMPANY LEVEL)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.gallery_albums (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     description TEXT NOT NULL,
@@ -327,7 +327,7 @@ CREATE TABLE IF NOT EXISTS public.gallery_albums (
 -- 14. GALLERY IMAGES (PER ALBUM)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.gallery_images (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     album_id UUID NOT NULL REFERENCES public.gallery_albums(id) ON DELETE CASCADE,
     image_url TEXT NOT NULL,
     alt_text TEXT,
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS public.gallery_images (
 -- 15. PROGRAMS & INTERNSHIPS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.programs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     description TEXT NOT NULL,
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS public.programs (
 -- 16. TESTIMONIALS & CLIENT ENDORSEMENTS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.testimonials (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     designation TEXT NOT NULL,
     organization TEXT NOT NULL,
@@ -382,7 +382,7 @@ CREATE TABLE IF NOT EXISTS public.testimonials (
 -- 17. BLOG POSTS & INSIGHTS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.blog_posts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     author TEXT NOT NULL DEFAULT 'Veltora Editorial',
@@ -406,7 +406,7 @@ CREATE TABLE IF NOT EXISTS public.blog_posts (
 -- 18. ENQUIRIES & LEAD CRM
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.enquiries (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reference_no TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -429,7 +429,7 @@ CREATE TABLE IF NOT EXISTS public.enquiries (
 -- 19. ENQUIRY NOTES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.enquiry_notes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enquiry_id UUID NOT NULL REFERENCES public.enquiries(id) ON DELETE CASCADE,
     note TEXT NOT NULL,
     author TEXT NOT NULL,
@@ -440,7 +440,7 @@ CREATE TABLE IF NOT EXISTS public.enquiry_notes (
 -- 20. NAVIGATION ITEMS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.navigation_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     label TEXT NOT NULL,
     url TEXT NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT true,
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS public.seo_settings (
 -- 23. MEDIA VAULT & ASSETS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.media (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     file_name TEXT NOT NULL,
     url TEXT NOT NULL,
     thumbnail_url TEXT,
@@ -497,7 +497,7 @@ CREATE TABLE IF NOT EXISTS public.media (
 -- 24. FAQS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.faqs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     question TEXT NOT NULL,
     answer TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'General',
@@ -529,7 +529,7 @@ CREATE TABLE IF NOT EXISTS public.careers (
 -- 26. CUSTOM CMS PAGES
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.custom_pages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     content TEXT NOT NULL,
@@ -597,7 +597,7 @@ CREATE TABLE IF NOT EXISTS public.error_page_settings (
 -- 29. ACTIVITY / AUDIT LOGS
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     action TEXT NOT NULL,
     entity TEXT NOT NULL,
     entity_id TEXT,
@@ -734,3 +734,4 @@ CREATE POLICY "Admins full access cookie settings" ON public.cookie_settings FOR
 CREATE POLICY "Admins full access loading screen settings" ON public.loading_screen_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admins full access error page settings" ON public.error_page_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Admins full access audit logs" ON public.audit_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+

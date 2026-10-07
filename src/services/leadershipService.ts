@@ -1,9 +1,52 @@
 import { supabase } from '../lib/supabase';
 import { Leadership } from '../types';
 
+type LeadershipRow = {
+  id: string;
+  name: string;
+  slug: string;
+  role_type: Leadership['roleType'];
+  designation: string;
+  short_bio: string;
+  full_bio: string;
+  photo_url: string;
+  linkedin_url?: string | null;
+  instagram_url?: string | null;
+  github_url?: string | null;
+  email?: string | null;
+  whatsapp?: string | null;
+  portfolio_url?: string | null;
+  other_contact_url?: string | null;
+  display_order: number;
+  is_active: boolean;
+};
+
+const mapLeadershipRecord = (row: LeadershipRow): Leadership => ({
+  id: row.id,
+  name: row.name,
+  slug: row.slug,
+  roleType: row.role_type,
+  designation: row.designation,
+  shortBio: row.short_bio,
+  fullBio: row.full_bio,
+  photoUrl: row.photo_url,
+  linkedinUrl: row.linkedin_url ?? undefined,
+  instagramUrl: row.instagram_url ?? undefined,
+  githubUrl: row.github_url ?? undefined,
+  email: row.email ?? undefined,
+  whatsapp: row.whatsapp ?? undefined,
+  portfolioUrl: row.portfolio_url ?? undefined,
+  otherContactUrl: row.other_contact_url ?? undefined,
+  displayOrder: row.display_order,
+  isActive: row.is_active,
+});
+
 export const leadershipService = {
   async getLeadership(): Promise<Leadership[]> {
-    if (!supabase) return [];
+    if (!supabase) {
+      throw new Error('Supabase not configured');
+    }
+
     const { data, error } = await supabase
       .from('leadership')
       .select('*')
@@ -13,31 +56,15 @@ export const leadershipService = {
       console.error('Error fetching leadership from Supabase:', error);
       throw error;
     }
+
     if (!data) return [];
 
-    return data.map((l: any) => ({
-      id: l.id,
-      name: l.name,
-      slug: l.slug,
-      roleType: l.role_type,
-      designation: l.designation,
-      shortBio: l.short_bio,
-      fullBio: l.full_bio,
-      photoUrl: l.photo_url,
-      linkedinUrl: l.linkedin_url || undefined,
-      instagramUrl: l.instagram_url || undefined,
-      githubUrl: l.github_url || undefined,
-      email: l.email || undefined,
-      whatsapp: l.whatsapp || undefined,
-      portfolioUrl: l.portfolio_url || undefined,
-      otherContactUrl: l.other_contact_url || undefined,
-      displayOrder: l.display_order,
-      isActive: l.is_active,
-    }));
+    return data.map((row) => mapLeadershipRecord(row as LeadershipRow));
   },
 
   async addLeadership(leader: Omit<Leadership, 'id'>): Promise<Leadership> {
     if (!supabase) throw new Error('Supabase not configured');
+
     const { data, error } = await supabase
       .from('leadership')
       .insert({
@@ -66,32 +93,20 @@ export const leadershipService = {
       throw error;
     }
 
-    return {
-      id: data.id,
-      name: data.name,
-      slug: data.slug,
-      roleType: data.role_type,
-      designation: data.designation,
-      shortBio: data.short_bio,
-      fullBio: data.full_bio,
-      photoUrl: data.photo_url,
-      linkedinUrl: data.linkedin_url || undefined,
-      instagramUrl: data.instagram_url || undefined,
-      githubUrl: data.github_url || undefined,
-      email: data.email || undefined,
-      whatsapp: data.whatsapp || undefined,
-      portfolioUrl: data.portfolio_url || undefined,
-      otherContactUrl: data.other_contact_url || undefined,
-      displayOrder: data.display_order,
-      isActive: data.is_active,
-    };
+    if (!data) {
+      throw new Error('Leadership insert returned no record');
+    }
+
+    return mapLeadershipRecord(data as LeadershipRow);
   },
 
-  async updateLeadership(id: string, leader: Partial<Leadership>): Promise<void> {
-    if (!supabase) return;
-    const payload: Record<string, any> = {
+  async updateLeadership(id: string, leader: Partial<Leadership>): Promise<Leadership> {
+    if (!supabase) throw new Error('Supabase not configured');
+
+    const payload: Record<string, string | number | boolean | null> = {
       updated_at: new Date().toISOString(),
     };
+
     if (leader.name !== undefined) payload.name = leader.name;
     if (leader.slug !== undefined) payload.slug = leader.slug;
     if (leader.roleType !== undefined) payload.role_type = leader.roleType;
@@ -109,19 +124,28 @@ export const leadershipService = {
     if (leader.displayOrder !== undefined) payload.display_order = leader.displayOrder;
     if (leader.isActive !== undefined) payload.is_active = leader.isActive;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('leadership')
       .update(payload)
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
 
     if (error) {
       console.error(`Error updating leader ${id}:`, error);
       throw error;
     }
+
+    if (!data) {
+      throw new Error(`Leadership update for ${id} returned no record`);
+    }
+
+    return mapLeadershipRecord(data as LeadershipRow);
   },
 
   async deleteLeadership(id: string): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) throw new Error('Supabase not configured');
+
     const { error } = await supabase
       .from('leadership')
       .delete()

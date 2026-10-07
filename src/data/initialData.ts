@@ -105,48 +105,7 @@ export const initialHomepageSections: HomepageSection[] = [
 
 export const initialCampaigns: PromotionalCampaign[] = [];
 
-export const initialLeadership: Leadership[] = [
-  {
-    id: 'lead-1',
-    name: 'Aakash Verma',
-    slug: 'aakash-verma',
-    roleType: 'founder',
-    designation: 'Founder & Chief Technology Officer',
-    shortBio: 'Systems architect, product builder, and student founder driving Veltora’s technical vision and engineering standards.',
-    fullBio:
-      'Aakash founded Veltora with a conviction that ambitious student engineers can craft enterprise-grade digital systems. Leading software architecture, cloud platforms, and engineering mentorship, he brings deep expertise in full-stack web technologies, distributed backend design, and high-performance user interfaces.',
-    photoUrl: '/src/assets/images/founder_portrait_1791103497099.jpg',
-    linkedinUrl: 'https://linkedin.com/in/veltora-founder',
-    instagramUrl: 'https://instagram.com/veltora.tech',
-    githubUrl: 'https://github.com/veltora-founder',
-    email: 'founder@veltoraitsolutions.com',
-    whatsapp: '919876543210',
-    portfolioUrl: 'https://veltoraitsolutions.com/leadership/aakash-verma',
-    otherContactUrl: 'https://cal.com/veltora-founder',
-    displayOrder: 1,
-    isActive: true,
-  },
-  {
-    id: 'lead-2',
-    name: 'Rohan Sharma',
-    slug: 'rohan-sharma',
-    roleType: 'co_founder',
-    designation: 'Co-Founder & Head of Product',
-    shortBio: 'Product strategist and operations lead ensuring every digital solution delivers measurable business value and elegant design.',
-    fullBio:
-      'Rohan spearheads product lifecycle, client strategy, and growth initiatives at Veltora. With a focus on human-centered design systems and pragmatic business workflows, he aligns cutting-edge technology with real-world client objectives.',
-    photoUrl: '/src/assets/images/cofounder_portrait_1791103511271.jpg',
-    linkedinUrl: 'https://linkedin.com/in/veltora-cofounder',
-    instagramUrl: 'https://instagram.com/veltora.tech',
-    githubUrl: 'https://github.com/veltora-cofounder',
-    email: 'rohan@veltoraitsolutions.com',
-    whatsapp: '919876543211',
-    portfolioUrl: 'https://veltoraitsolutions.com/leadership/rohan-sharma',
-    otherContactUrl: 'https://cal.com/veltora-cofounder',
-    displayOrder: 2,
-    isActive: true,
-  },
-];
+export const initialLeadership: Leadership[] = [];
 
 export const initialTeamMembers: TeamMember[] = [
   {
