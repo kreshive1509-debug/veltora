@@ -29,6 +29,7 @@ import { AdminLegal } from './AdminLegal';
 import { AdminLoadingScreen } from './AdminLoadingScreen';
 import { AdminErrorPages } from './AdminErrorPages';
 import { AdminAuditLogs } from './AdminAuditLogs';
+import { AdminMaintenance } from './AdminMaintenance';
 
 interface AdminPortalProps {
   onBackToSite: () => void;
@@ -63,6 +64,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       <main className="flex-1 overflow-y-auto p-6 sm:p-10">
         <div className="max-w-6xl mx-auto">
           {currentTab === 'dashboard' && <AdminDashboard onNavigateTab={setCurrentTab} />}
+          {currentTab === 'maintenance' && <AdminMaintenance />}
           {currentTab === 'branding' && <AdminBrandAppearance />}
           {currentTab === 'hero' && <AdminHeroSettings />}
           {currentTab === 'homepage' && <AdminSections />}

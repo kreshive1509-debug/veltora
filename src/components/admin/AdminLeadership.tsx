@@ -62,6 +62,8 @@ export const AdminLeadership: React.FC = () => {
       return;
     }
 
+    if (isCreating) return;
+
     if (!editingId || !leadership.some((leader) => leader.id === editingId)) {
       const firstLeader = leadership[0];
       setEditingId(firstLeader.id);
@@ -76,7 +78,7 @@ export const AdminLeadership: React.FC = () => {
         otherContactUrl: firstLeader.otherContactUrl ?? '',
       });
     }
-  }, [leadership, editingId]);
+  }, [leadership, editingId, isCreating]);
 
   const openCreateForm = () => {
     setErrorMessage(null);

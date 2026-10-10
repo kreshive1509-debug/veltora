@@ -21,10 +21,6 @@ export const LeadershipSpotlight: React.FC = () => {
     .filter((l) => l.isActive)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  if (activeLeaders.length === 0) {
-    return null;
-  }
-
   return (
     <section id="leadership" className="py-24 bg-[#FAF7F1] border-y border-[#EAE2D0]/60 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

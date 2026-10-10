@@ -13,11 +13,7 @@ export const authService = {
 
   async login(email: string, pass: string): Promise<{ success: boolean; user?: any; error?: string }> {
     if (!supabase) {
-      // In development mode when Supabase credentials are not filled yet
-      if (email === 'veltoraitsolution2026@gmail.com' && pass === 'Veltora@2026') {
-        return { success: true, user: { email } };
-      }
-      return { success: false, error: 'Database service is in setup mode. Please enter valid administrative credentials.' };
+      return { success: false, error: 'Supabase authentication is unavailable. Check the Supabase configuration and try again.' };
     }
 
     try {
@@ -27,10 +23,6 @@ export const authService = {
       });
 
       if (error) {
-        // Allow fallback dev login if credentials match Veltora Admin while initial user is created
-        if (email === 'veltoraitsolution2026@gmail.com' && pass === 'Veltora@2026') {
-          return { success: true, user: { email } };
-        }
         return { success: false, error: error.message };
       }
 

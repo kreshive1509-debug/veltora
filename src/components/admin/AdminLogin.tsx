@@ -8,7 +8,7 @@ interface AdminLoginProps {
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onBackToSite }) => {
   const { siteSettings, loginAdmin } = useCms();
-  const [email, setEmail] = useState('veltoraitsolution2026@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

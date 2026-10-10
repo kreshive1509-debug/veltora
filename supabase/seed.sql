@@ -137,5 +137,5 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 8. Careers
 INSERT INTO public.careers (id, title, subtitle, description, google_form_url, is_enabled)
-VALUES ('default', 'Join the Veltora Engineering Squad', 'Innovate with Ambition', 'We are always looking for hungry student engineers and design craftsmen to build impactful digital solutions.', 'https://docs.google.com/forms/d/e/1FAIpQLSc-sample/viewform', true)
+VALUES ('default', 'Join the Veltora Engineering Squad', 'Innovate with Ambition', 'We are always looking for hungry student engineers and design craftsmen to build impactful digital solutions.', '', false)
 ON CONFLICT (id) DO NOTHING;

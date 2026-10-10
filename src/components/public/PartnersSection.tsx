@@ -17,10 +17,6 @@ export const PartnersSection: React.FC<PartnersSectionProps> = ({
     .filter((p) => p.isActive && p.isFeatured)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  if (activePartners.length === 0) {
-    return null;
-  }
-
   return (
     <section id="partners" className="py-24 bg-[#FAF7F1] border-y border-[#EAE2D0]/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

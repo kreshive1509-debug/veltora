@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCms } from '../../context/CmsContext';
+import { isValidCareersFormUrl } from '../../services/careersService';
 import {
   ExternalLink,
   GraduationCap,
@@ -18,9 +19,10 @@ interface CareersPageProps {
 
 export const CareersPage: React.FC<CareersPageProps> = ({ onNavigateHome, onNavigateContact }) => {
   const { careerSettings, siteSettings } = useCms();
+  const canApply = careerSettings.isEnabled && isValidCareersFormUrl(careerSettings.googleFormUrl);
 
   const handleOpenGoogleForm = () => {
-    if (careerSettings.googleFormUrl) {
+    if (canApply) {
       window.open(careerSettings.googleFormUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -43,13 +45,15 @@ export const CareersPage: React.FC<CareersPageProps> = ({ onNavigateHome, onNavi
         </p>
 
         <div className="pt-4 flex items-center justify-center gap-4">
-          <button
-            onClick={handleOpenGoogleForm}
-            className="px-6 py-3 text-xs font-semibold text-white bg-[#191C1E] hover:bg-[#2B2F34] rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer group"
-          >
-            <span>Apply via Google Form</span>
-            <ExternalLink className="w-3.5 h-3.5 text-[#C59A4E] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </button>
+          {canApply && (
+            <button
+              onClick={handleOpenGoogleForm}
+              className="px-6 py-3 text-xs font-semibold text-white bg-[#191C1E] hover:bg-[#2B2F34] rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer group"
+            >
+              <span>Apply via Google Form</span>
+              <ExternalLink className="w-3.5 h-3.5 text-[#C59A4E] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          )}
           <button
             onClick={onNavigateContact}
             className="px-6 py-3 text-xs font-semibold text-[#191C1E] bg-white hover:bg-[#FAF8F5] border border-[#E6DECE] rounded-xl transition-all shadow-2xs cursor-pointer"

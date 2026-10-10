@@ -98,9 +98,11 @@ export const initialHomepageSections: HomepageSection[] = [
   { id: '8', key: 'partners', label: 'Our Partners', title: 'Our Partners', subtitle: 'Meaningful collaborations', isEnabled: true, order: 8 },
   { id: '9', key: 'gallery', label: 'Inside Veltora (Gallery)', title: 'Inside Veltora', subtitle: 'Company moments & milestones', isEnabled: true, order: 9 },
   { id: '10', key: 'programs', label: 'Programs & Internships', title: 'Internships & Training', subtitle: 'Empowering future tech creators', isEnabled: true, order: 10 },
-  { id: '11', key: 'testimonials', label: 'Testimonials', title: 'Client Voices', subtitle: 'What our collaborators say', isEnabled: true, order: 11 },
-  { id: '12', key: 'blog', label: 'Blog & Insights', title: 'Engineering Journal', subtitle: 'Perspectives on tech & innovation', isEnabled: true, order: 12 },
-  { id: '13', key: 'contact', label: 'Project Enquiry & Contact', title: 'Let’s Build Together', subtitle: 'Start your journey with Veltora', isEnabled: true, order: 13 },
+  { id: '11', key: 'team', label: 'Core Team', title: 'Engineering & Design Team', subtitle: 'Minds behind the code', isEnabled: true, order: 11 },
+  { id: '12', key: 'testimonials', label: 'Client Testimonials', title: 'Testimonials', subtitle: 'What leaders say about Veltora', isEnabled: true, order: 12 },
+  { id: '13', key: 'faq', label: 'Frequently Asked Questions', title: 'FAQ', subtitle: 'Answers to common questions', isEnabled: true, order: 13 },
+  { id: '14', key: 'blog', label: 'Insights & Engineering', title: 'Insights', subtitle: 'Perspectives on tech & innovation', isEnabled: true, order: 14 },
+  { id: '15', key: 'contact', label: 'Contact & Consultation', title: 'Get in Touch', subtitle: 'Initiate your technical blueprint', isEnabled: true, order: 15 },
 ];
 
 export const initialCampaigns: PromotionalCampaign[] = [];
@@ -901,9 +903,9 @@ export const initialCareerSettings: CareerSettings = {
   subtitle: 'Innovate with Ambition',
   description:
     'We are always looking for hungry student engineers, frontend artisans, cloud architects, and community leaders who want to build real products instead of synthetic prototypes.',
-  googleFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSc-Veltora-Career-Application-Form/viewform',
+  googleFormUrl: '',
   bannerUrl: '/src/assets/images/gallery_fellowship_team_1791104287245.jpg',
-  isEnabled: true,
+  isEnabled: false,
   displayOrder: 11,
   perks: [
     'Work on live production architectures used by real clients',

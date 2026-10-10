@@ -506,3 +506,17 @@ export interface AuditLog {
   userEmail: string;
   details?: string;
 }
+
+export interface MaintenanceSettings {
+  id: string;
+  enabled: boolean;
+  title: string;
+  message: string;
+  description?: string;
+  startAt?: string;
+  endAt?: string;
+  allowAdminAccess: boolean;
+  showCountdown: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
+}

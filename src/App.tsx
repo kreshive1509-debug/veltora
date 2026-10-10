@@ -36,13 +36,16 @@ import { CookieConsentBanner } from './components/public/CookieConsentBanner';
 import { LoadingScreen } from './components/public/LoadingScreen';
 import { Footer } from './components/public/Footer';
 import { NotFound } from './components/public/NotFound';
+import { MaintenancePage } from './components/public/MaintenancePage';
 import { AdminPortal } from './components/admin/AdminPortal';
 import { AdminTab } from './components/admin/AdminSidebar';
+import { getMaintenanceState } from './services/maintenanceService';
 
 function MainApp() {
-  const { homepageSections, customPages, legalPages } = useCms();
+  const { homepageSections, customPages, legalPages, isDbConnected, isLoading, dbError, refreshData, maintenanceSettings } = useCms();
   const [currentPath, setCurrentPath] = useState<string>(window.location.pathname);
   const [loadingComplete, setLoadingComplete] = useState<boolean>(false);
+  const maintenanceStatus = getMaintenanceState(maintenanceSettings);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -72,6 +75,37 @@ function MainApp() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const renderPublicStatus = (content: React.ReactNode) => (
+    <div className="min-h-screen bg-[#FAF8F5] text-[#191C1E]">
+      <Navbar onNavigate={handleScrollToSection} onOpenAdmin={() => navigateTo('/admin')} />
+      <main className="mx-auto max-w-7xl px-6 pb-16 pt-28">{content}</main>
+    </div>
+  );
+
+  if (isLoading) {
+    const loadingContent = <p className="text-center text-sm text-[#52575E]">Loading website content...</p>;
+    return currentPath.startsWith('/admin')
+      ? <main className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">{loadingContent}</main>
+      : renderPublicStatus(loadingContent);
+  }
+
+  if (dbError && currentPath.startsWith('/admin')) {
+    const errorContent = (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center text-[#191C1E]">
+        <h1 className="text-xl font-semibold">{isDbConnected ? 'CMS settings need attention' : 'Website content is unavailable'}</h1>
+        <p className="max-w-xl text-sm text-[#52575E]">{dbError}</p>
+        <button onClick={() => void refreshData()} className="rounded-lg bg-[#191C1E] px-4 py-2 text-sm font-medium text-white">
+          {isDbConnected ? 'Retry loading CMS settings' : 'Retry database connection'}
+        </button>
+      </div>
+    );
+    return <main className="min-h-screen flex items-center justify-center bg-[#FAF8F5] px-6">{errorContent}</main>;
+  };
+
+  if (!currentPath.startsWith('/admin') && maintenanceStatus !== 'disabled') {
+    return <MaintenancePage />;
+  }
 
   // Route: Admin Console (/admin, /admin/dashboard, /admin/branding, etc.)
   if (currentPath.startsWith('/admin')) {

@@ -45,10 +45,6 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
     internalSelected ||
     (selectedSlug ? activeServices.find((s) => s.slug === selectedSlug) : null);
 
-  if (activeServices.length === 0) {
-    return null;
-  }
-
   return (
     <section id="services" className="py-24 bg-[#FAF8F5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

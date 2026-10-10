@@ -20,4 +20,5 @@ export * from './careersService';
 export * from './pagesService';
 export * from './systemSettingsService';
 export * from './auditLogsService';
+export * from './maintenanceService';
 export * from './authService';

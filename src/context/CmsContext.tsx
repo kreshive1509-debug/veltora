@@ -32,39 +32,17 @@ import {
   ErrorPageSettings,
   HeaderSettings,
   FooterSettings,
+  MaintenanceSettings,
 } from '../types';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { applyBrandThemeToDom, initialBrandAppearance, THEME_PRESETS } from '../lib/brandTheme';
 import {
-  initialSiteSettings,
-  initialBrandAppearance,
+  initialHeaderSettings,
   initialHeroSettings,
   initialHomepageSections,
-  initialCampaigns,
-  initialTeamMembers,
-  initialServices,
-  initialProjects,
-  initialProjectImages,
-  initialPartners,
-  initialGalleryAlbums,
-  initialGalleryImages,
-  initialPrograms,
-  initialTestimonials,
-  initialBlogPosts,
-  initialSocialLinks,
   initialNavigationItems,
-  initialSeoSettings,
-  initialMedia,
-  initialFaqs,
-  initialCareerSettings,
-  initialCustomPages,
-  initialLegalPages,
-  initialCookieSettings,
-  initialLoadingScreenSettings,
-  initialErrorPageSettings,
-  initialHeaderSettings,
-  initialFooterSettings,
+  initialSiteSettings,
 } from '../data/initialData';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { applyBrandThemeToDom, THEME_PRESETS } from '../lib/brandTheme';
 import {
   siteSettingsService,
   heroService,
@@ -89,6 +67,7 @@ import {
   systemSettingsService,
   auditLogsService,
   authService,
+  maintenanceService,
 } from '../services';
 
 interface CmsContextType {
@@ -123,6 +102,7 @@ interface CmsContextType {
   seoSettings: SeoSettings;
   media: MediaItem[];
   auditLogs: AuditLog[];
+  maintenanceSettings: MaintenanceSettings;
 
   // Database Connection Status
   isDbConnected: boolean;
@@ -224,6 +204,7 @@ interface CmsContextType {
   updateCookieSettings: (cookie: Partial<CookieConsentSettings>) => Promise<void>;
   updateLoadingScreenSettings: (loading: Partial<LoadingScreenSettings>) => Promise<void>;
   updateErrorPageSettings: (errorPage: Partial<ErrorPageSettings>) => Promise<void>;
+  updateMaintenanceSettings: (settings: Partial<MaintenanceSettings>) => Promise<void>;
 
   // Enquiries & CRM
   submitEnquiry: (enquiry: Omit<Enquiry, 'id' | 'referenceNo' | 'createdAt' | 'status'>) => Promise<{ referenceNo: string }>;
@@ -242,9 +223,6 @@ interface CmsContextType {
   deleteMediaItem: (id: string) => Promise<void>;
 
   // System Tools
-  resetToDefaults: () => Promise<void>;
-  exportDataJson: () => string;
-  importDataJson: (json: string) => Promise<boolean>;
 }
 
 const CmsContext = createContext<CmsContextType | null>(null);
@@ -253,37 +231,55 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialSiteSettings);
   const [brandAppearance, setBrandAppearance] = useState<BrandAppearanceSettings>(initialBrandAppearance);
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(initialHeaderSettings);
-  const [footerSettings, setFooterSettings] = useState<FooterSettings>(initialFooterSettings);
+  const [footerSettings, setFooterSettings] = useState<FooterSettings>({} as FooterSettings);
   const [heroSettings, setHeroSettings] = useState<HeroSettings>(initialHeroSettings);
   const [homepageSections, setHomepageSections] = useState<HomepageSection[]>(initialHomepageSections);
-  const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>(initialCampaigns);
+  const [campaigns, setCampaigns] = useState<PromotionalCampaign[]>([]);
   const [leadership, setLeadership] = useState<Leadership[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
-  const [services, setServices] = useState<Service[]>(initialServices);
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [projectImages, setProjectImages] = useState<ProjectImage[]>(initialProjectImages);
-  const [partners, setPartners] = useState<Partner[]>(initialPartners);
-  const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>(initialGalleryAlbums);
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(initialGalleryImages);
-  const [programs, setPrograms] = useState<Program[]>(initialPrograms);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(initialTestimonials);
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(initialBlogPosts);
-  const [faqs, setFaqs] = useState<FaqItem[]>(initialFaqs);
-  const [careerSettings, setCareerSettings] = useState<CareerSettings>(initialCareerSettings);
-  const [customPages, setCustomPages] = useState<CustomPage[]>(initialCustomPages);
-  const [legalPages, setLegalPages] = useState<Record<string, LegalPage>>(initialLegalPages);
-  const [cookieSettings, setCookieSettings] = useState<CookieConsentSettings>(initialCookieSettings);
-  const [loadingScreenSettings, setLoadingScreenSettings] = useState<LoadingScreenSettings>(initialLoadingScreenSettings);
-  const [errorPageSettings, setErrorPageSettings] = useState<ErrorPageSettings>(initialErrorPageSettings);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectImages, setProjectImages] = useState<ProjectImage[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [careerSettings, setCareerSettings] = useState<CareerSettings>({
+    title: 'Join the Veltora Engineering Squad',
+    subtitle: 'Innovate with Ambition',
+    description: 'We are always looking for hungry student engineers and design craftsmen to build impactful digital solutions.',
+    googleFormUrl: '',
+    isEnabled: false,
+    displayOrder: 0,
+    perks: [],
+    openRoles: [],
+  });
+  const [customPages, setCustomPages] = useState<CustomPage[]>([]);
+  const [legalPages, setLegalPages] = useState<Record<string, LegalPage>>({});
+  const [cookieSettings, setCookieSettings] = useState<CookieConsentSettings>({} as CookieConsentSettings);
+  const [loadingScreenSettings, setLoadingScreenSettings] = useState<LoadingScreenSettings>({} as LoadingScreenSettings);
+  const [errorPageSettings, setErrorPageSettings] = useState<ErrorPageSettings>({} as ErrorPageSettings);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(initialSocialLinks);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [navigationItems, setNavigationItems] = useState<NavigationItem[]>(initialNavigationItems);
-  const [seoSettings, setSeoSettings] = useState<SeoSettings>(initialSeoSettings);
-  const [media, setMedia] = useState<MediaItem[]>(initialMedia);
+  const [seoSettings, setSeoSettings] = useState<SeoSettings>({} as SeoSettings);
+  const [media, setMedia] = useState<MediaItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [maintenanceSettings, setMaintenanceSettings] = useState<MaintenanceSettings>({
+    id: 'default',
+    enabled: false,
+    title: 'Scheduled maintenance',
+    message: 'We are making improvements to Veltora.',
+    description: 'We should be back shortly.',
+    allowAdminAccess: true,
+    showCountdown: false,
+  });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isDbConnected, setIsDbConnected] = useState<boolean>(isSupabaseConfigured);
+  const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
   // Admin Auth State
@@ -292,15 +288,22 @@ export function CmsProvider({ children }: { children: ReactNode }) {
 
   // Apply Theme to DOM whenever brandAppearance changes
   useEffect(() => {
-    applyBrandThemeToDom(brandAppearance);
-  }, [brandAppearance]);
+    if (!isLoading && !dbError && brandAppearance.colors) {
+      applyBrandThemeToDom(brandAppearance);
+    }
+  }, [brandAppearance, dbError, isLoading]);
 
   // Check auth session and fetch all records from Supabase on mount
   const loadDatabaseData = async () => {
     setIsLoading(true);
     setDbError(null);
+    setIsDbConnected(false);
 
     try {
+      if (!isSupabaseConfigured) {
+        throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the deployment environment.');
+      }
+
       // Check auth session
       const session = await authService.getCurrentSession();
       if (session?.user) {
@@ -341,6 +344,7 @@ export function CmsProvider({ children }: { children: ReactNode }) {
           fetchedSeo,
           fetchedMedia,
           fetchedAuditLogs,
+          fetchedMaintenance,
         ] = await Promise.allSettled([
           siteSettingsService.getSiteSettings(),
           siteSettingsService.getBrandAppearance(),
@@ -373,36 +377,83 @@ export function CmsProvider({ children }: { children: ReactNode }) {
           seoService.getSeoSettings(),
           mediaService.getMedia(),
           auditLogsService.getAuditLogs(),
+          maintenanceService.getMaintenanceSettings(),
         ]);
+
+        const failedResults = [
+          fetchedSite, fetchedBrand, fetchedHeader, fetchedFooter, fetchedHero, fetchedSections,
+          fetchedCampaigns, fetchedLeadership, fetchedTeam, fetchedServices, fetchedProjects,
+          fetchedProjectImages, fetchedPartners, fetchedAlbums, fetchedGalleryImages, fetchedPrograms,
+          fetchedTestimonials, fetchedBlog, fetchedFaqs, fetchedCareers, fetchedCustomPages,
+          fetchedLegalPages, fetchedCookie, fetchedLoading, fetchedErrorPage, fetchedEnquiries,
+          fetchedNav, fetchedSocial, fetchedSeo, fetchedMedia, fetchedAuditLogs, fetchedMaintenance,
+        ].filter((result) => result.status === 'rejected');
+
+        if (failedResults.length > 0) {
+          console.error('CMS database reads failed:', failedResults);
+          throw new Error('Some CMS records could not be loaded from Supabase. Retry the request or check the database permissions.');
+        }
+
+        setIsDbConnected(true);
+
+        const missingSettings: string[] = [];
+        if (fetchedSite.status === 'fulfilled' && !fetchedSite.value) missingSettings.push('site_settings');
+        if (fetchedBrand.status === 'fulfilled' && !fetchedBrand.value) missingSettings.push('brand_appearance');
+        if (fetchedHeader.status === 'fulfilled' && !fetchedHeader.value) missingSettings.push('header_settings');
+        if (fetchedFooter.status === 'fulfilled' && !fetchedFooter.value) missingSettings.push('footer_settings');
+        if (fetchedHero.status === 'fulfilled' && !fetchedHero.value) missingSettings.push('hero_settings');
+        if (fetchedCookie.status === 'fulfilled' && !fetchedCookie.value) missingSettings.push('cookie_settings');
+        if (fetchedLoading.status === 'fulfilled' && !fetchedLoading.value) missingSettings.push('loading_screen_settings');
+        if (fetchedErrorPage.status === 'fulfilled' && !fetchedErrorPage.value) missingSettings.push('error_page_settings');
+        if (fetchedSeo.status === 'fulfilled' && !fetchedSeo.value) missingSettings.push('seo_settings');
+
+        if (missingSettings.length > 0) {
+          throw new Error(
+            `Required CMS default records are missing or not visible to the public role: ${missingSettings.join(', ')}. Insert the missing rows with id = 'default' and verify their SELECT policies; no reset is needed.`
+          );
+        }
 
         if (fetchedSite.status === 'fulfilled' && fetchedSite.value) setSiteSettings(fetchedSite.value);
         if (fetchedBrand.status === 'fulfilled' && fetchedBrand.value) setBrandAppearance(fetchedBrand.value);
+        if (fetchedMaintenance.status === 'fulfilled') setMaintenanceSettings(fetchedMaintenance.value || {
+          id: 'default',
+          enabled: false,
+          title: 'Scheduled maintenance',
+          message: 'We are making improvements to Veltora.',
+          description: 'We should be back shortly.',
+          allowAdminAccess: true,
+          showCountdown: false,
+        });
         if (fetchedHeader.status === 'fulfilled' && fetchedHeader.value) setHeaderSettings(fetchedHeader.value);
         if (fetchedFooter.status === 'fulfilled' && fetchedFooter.value) setFooterSettings(fetchedFooter.value);
         if (fetchedHero.status === 'fulfilled' && fetchedHero.value) setHeroSettings(fetchedHero.value);
-        if (fetchedSections.status === 'fulfilled' && fetchedSections.value.length > 0) setHomepageSections(fetchedSections.value);
+        if (fetchedSections.status === 'fulfilled') {
+          setHomepageSections(fetchedSections.value.length > 0 ? fetchedSections.value : initialHomepageSections);
+        }
         if (fetchedCampaigns.status === 'fulfilled') setCampaigns(fetchedCampaigns.value);
-        if (fetchedLeadership.status === 'fulfilled' && fetchedLeadership.value.length > 0) setLeadership(fetchedLeadership.value);
-        if (fetchedTeam.status === 'fulfilled' && fetchedTeam.value.length > 0) setTeamMembers(fetchedTeam.value);
-        if (fetchedServices.status === 'fulfilled' && fetchedServices.value.length > 0) setServices(fetchedServices.value);
-        if (fetchedProjects.status === 'fulfilled' && fetchedProjects.value.length > 0) setProjects(fetchedProjects.value);
+        if (fetchedLeadership.status === 'fulfilled') setLeadership(fetchedLeadership.value);
+        if (fetchedTeam.status === 'fulfilled') setTeamMembers(fetchedTeam.value);
+        if (fetchedServices.status === 'fulfilled') setServices(fetchedServices.value);
+        if (fetchedProjects.status === 'fulfilled') setProjects(fetchedProjects.value);
         if (fetchedProjectImages.status === 'fulfilled') setProjectImages(fetchedProjectImages.value);
-        if (fetchedPartners.status === 'fulfilled' && fetchedPartners.value.length > 0) setPartners(fetchedPartners.value);
-        if (fetchedAlbums.status === 'fulfilled' && fetchedAlbums.value.length > 0) setGalleryAlbums(fetchedAlbums.value);
+        if (fetchedPartners.status === 'fulfilled') setPartners(fetchedPartners.value);
+        if (fetchedAlbums.status === 'fulfilled') setGalleryAlbums(fetchedAlbums.value);
         if (fetchedGalleryImages.status === 'fulfilled') setGalleryImages(fetchedGalleryImages.value);
-        if (fetchedPrograms.status === 'fulfilled' && fetchedPrograms.value.length > 0) setPrograms(fetchedPrograms.value);
-        if (fetchedTestimonials.status === 'fulfilled' && fetchedTestimonials.value.length > 0) setTestimonials(fetchedTestimonials.value);
-        if (fetchedBlog.status === 'fulfilled' && fetchedBlog.value.length > 0) setBlogPosts(fetchedBlog.value);
-        if (fetchedFaqs.status === 'fulfilled' && fetchedFaqs.value.length > 0) setFaqs(fetchedFaqs.value);
+        if (fetchedPrograms.status === 'fulfilled') setPrograms(fetchedPrograms.value);
+        if (fetchedTestimonials.status === 'fulfilled') setTestimonials(fetchedTestimonials.value);
+        if (fetchedBlog.status === 'fulfilled') setBlogPosts(fetchedBlog.value);
+        if (fetchedFaqs.status === 'fulfilled') setFaqs(fetchedFaqs.value);
         if (fetchedCareers.status === 'fulfilled' && fetchedCareers.value) setCareerSettings(fetchedCareers.value);
         if (fetchedCustomPages.status === 'fulfilled') setCustomPages(fetchedCustomPages.value);
-        if (fetchedLegalPages.status === 'fulfilled' && Object.keys(fetchedLegalPages.value).length > 0) setLegalPages(fetchedLegalPages.value);
+        if (fetchedLegalPages.status === 'fulfilled') setLegalPages(fetchedLegalPages.value);
         if (fetchedCookie.status === 'fulfilled' && fetchedCookie.value) setCookieSettings(fetchedCookie.value);
         if (fetchedLoading.status === 'fulfilled' && fetchedLoading.value) setLoadingScreenSettings(fetchedLoading.value);
         if (fetchedErrorPage.status === 'fulfilled' && fetchedErrorPage.value) setErrorPageSettings(fetchedErrorPage.value);
         if (fetchedEnquiries.status === 'fulfilled') setEnquiries(fetchedEnquiries.value);
-        if (fetchedNav.status === 'fulfilled' && fetchedNav.value.length > 0) setNavigationItems(fetchedNav.value);
-        if (fetchedSocial.status === 'fulfilled' && fetchedSocial.value.length > 0) setSocialLinks(fetchedSocial.value);
+        if (fetchedNav.status === 'fulfilled') {
+          setNavigationItems(fetchedNav.value.length > 0 ? fetchedNav.value : initialNavigationItems);
+        }
+        if (fetchedSocial.status === 'fulfilled') setSocialLinks(fetchedSocial.value);
         if (fetchedSeo.status === 'fulfilled' && fetchedSeo.value) setSeoSettings(fetchedSeo.value);
         if (fetchedMedia.status === 'fulfilled') setMedia(fetchedMedia.value);
         if (fetchedAuditLogs.status === 'fulfilled') setAuditLogs(fetchedAuditLogs.value);
@@ -839,6 +890,12 @@ export function CmsProvider({ children }: { children: ReactNode }) {
     logAction('UPDATE', '404 Error Page', 'Updated not-found presentation');
   };
 
+  const updateMaintenanceSettings = async (settings: Partial<MaintenanceSettings>) => {
+    setMaintenanceSettings((prev) => ({ ...prev, ...settings }));
+    await maintenanceService.updateMaintenanceSettings(settings);
+    logAction('UPDATE', 'Maintenance Mode', `Updated maintenance configuration`, 'default');
+  };
+
   // Enquiries & CRM
   const submitEnquiry = async (
     enquiryData: Omit<Enquiry, 'id' | 'referenceNo' | 'createdAt' | 'status'>
@@ -918,78 +975,6 @@ export function CmsProvider({ children }: { children: ReactNode }) {
     logAction('DELETE', 'Media Asset', `Deleted media`, id);
   };
 
-  // System Tools
-  const resetToDefaults = async () => {
-    setSiteSettings(initialSiteSettings);
-    setBrandAppearance(initialBrandAppearance);
-    setHeroSettings(initialHeroSettings);
-    setHomepageSections(initialHomepageSections);
-    logAction('RESET', 'System', 'Reset site configuration to baseline');
-  };
-
-  const exportDataJson = () => {
-    const payload = {
-      siteSettings,
-      brandAppearance,
-      heroSettings,
-      homepageSections,
-      campaigns,
-      leadership,
-      teamMembers,
-      services,
-      projects,
-      projectImages,
-      partners,
-      galleryAlbums,
-      galleryImages,
-      programs,
-      testimonials,
-      blogPosts,
-      faqs,
-      careerSettings,
-      customPages,
-      legalPages,
-      cookieSettings,
-      loadingScreenSettings,
-      errorPageSettings,
-      headerSettings,
-      footerSettings,
-      socialLinks,
-      navigationItems,
-      seoSettings,
-      media,
-      exportedAt: new Date().toISOString(),
-    };
-    return JSON.stringify(payload, null, 2);
-  };
-
-  const importDataJson = async (json: string): Promise<boolean> => {
-    try {
-      const parsed = JSON.parse(json);
-      if (parsed.siteSettings) {
-        setSiteSettings(parsed.siteSettings);
-        await siteSettingsService.updateSiteSettings(parsed.siteSettings);
-      }
-      if (parsed.brandAppearance) {
-        setBrandAppearance(parsed.brandAppearance);
-        await siteSettingsService.updateBrandAppearance(parsed.brandAppearance);
-      }
-      if (parsed.heroSettings) {
-        setHeroSettings(parsed.heroSettings);
-        await heroService.updateHeroSettings(parsed.heroSettings);
-      }
-      if (parsed.homepageSections) {
-        setHomepageSections(parsed.homepageSections);
-        await sectionsService.updateHomepageSections(parsed.homepageSections);
-      }
-      logAction('IMPORT', 'System Data', 'Imported JSON data payload into Supabase');
-      return true;
-    } catch (err) {
-      console.error('Import failed:', err);
-      return false;
-    }
-  };
-
   return (
     <CmsContext.Provider
       value={{
@@ -1024,6 +1009,7 @@ export function CmsProvider({ children }: { children: ReactNode }) {
         seoSettings,
         media,
         auditLogs,
+        maintenanceSettings,
         isDbConnected,
         isLoading,
         dbError,
@@ -1089,6 +1075,7 @@ export function CmsProvider({ children }: { children: ReactNode }) {
         updateCookieSettings,
         updateLoadingScreenSettings,
         updateErrorPageSettings,
+        updateMaintenanceSettings,
         submitEnquiry,
         updateEnquiryStatus,
         updateEnquiryDetails,
@@ -1099,9 +1086,6 @@ export function CmsProvider({ children }: { children: ReactNode }) {
         updateSeoSettings,
         addMediaItem,
         deleteMediaItem,
-        resetToDefaults,
-        exportDataJson,
-        importDataJson,
       }}
     >
       {children}

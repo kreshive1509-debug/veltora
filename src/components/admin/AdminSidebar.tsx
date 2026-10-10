@@ -32,6 +32,7 @@ import {
 
 export type AdminTab =
   | 'dashboard'
+  | 'maintenance'
   | 'branding'
   | 'hero'
   | 'homepage'
@@ -76,6 +77,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const navItems: { id: AdminTab; label: string; icon: any; count?: number; group?: string }[] = [
     { id: 'dashboard', label: 'Overview Dashboard', icon: LayoutDashboard },
+    { id: 'maintenance', label: 'Maintenance Mode', icon: ShieldCheck },
     { id: 'enquiries', label: 'Client Enquiries', icon: Inbox, count: enquiriesCount },
     { id: 'branding', label: 'Brand & Appearance', icon: Palette },
     { id: 'hero', label: 'Hero & Background', icon: Sparkles },
