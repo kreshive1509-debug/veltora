@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCms } from '../../context/CmsContext';
-import { Project, ProjectStatus } from '../../types';
+import { ProjectCapability, ProjectTechnology } from '../../types';
 import { ImageLightbox, LightboxImage } from './ImageLightbox';
 import {
   ExternalLink,
@@ -31,7 +31,7 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
   onSelectPartner,
   onNavigateContact,
 }) => {
-  const { projects, projectImages, partners } = useCms();
+  const { projects, projectImages, partners, isAdminAuthenticated } = useCms();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -44,7 +44,8 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
 
   // Single Project Case Study View (/projects/:slug)
   if (projectSlug) {
-    const project = projects.find((p) => p.slug === projectSlug) || projects[0];
+    const adminPreview = new URLSearchParams(window.location.search).get('preview') === '1' && isAdminAuthenticated;
+    const project = projects.find((p) => p.slug === projectSlug && (p.isActive || adminPreview));
 
     if (!project) {
       return (
@@ -64,10 +65,15 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
     const currentProjectImages = projectImages
       .filter((img) => img.projectId === project.id)
       .sort((a, b) => a.displayOrder - b.displayOrder);
+    const coverImage = project.thumbnail || project.heroImageUrl;
+    const capabilities = project.capabilities || project.keyFeatures.map((title): ProjectCapability => ({ title }));
+    const technologyItems = project.technologyItems || project.technologies.map((name): ProjectTechnology => ({ name }));
+    const showCapabilities = capabilities.length > 0 || (project.hideCapabilitiesWhenEmpty === false && Boolean(project.capabilityHeading));
+    const showTechnologies = technologyItems.length > 0 || (project.hideTechnologiesWhenEmpty === false && Boolean(project.technologyHeading));
 
     // Prepare Lightbox Images
     const allGalleryImages: LightboxImage[] = [
-      { url: project.heroImageUrl || project.thumbnail, alt: project.name, caption: `${project.name} Hero View` },
+      ...(coverImage ? [{ url: coverImage, alt: project.name, caption: `${project.name} Cover` }] : []),
       ...currentProjectImages.map((img) => ({
         url: img.imageUrl,
         alt: img.altText || project.name,
@@ -158,12 +164,12 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
           </div>
 
           {/* Hero Media Banner */}
-          <div
+          {coverImage && <div
             className="group relative aspect-[16/9] w-full rounded-3xl overflow-hidden bg-[#F4EBD9]/40 border border-[#E6DECE] shadow-sm mb-12 cursor-pointer"
             onClick={() => openLightboxAt(0)}
           >
             <img
-              src={project.heroImageUrl || project.thumbnail}
+              src={coverImage}
               alt={project.name}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
@@ -174,7 +180,7 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
                 <span>Open Fullscreen Gallery</span>
               </span>
             </div>
-          </div>
+          </div>}
 
           {/* Impact Statistics */}
           {project.metrics && project.metrics.length > 0 && (
@@ -238,41 +244,39 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
             )}
 
             {/* Key Features */}
-            {project.keyFeatures && project.keyFeatures.length > 0 && (
+            {showCapabilities && (
               <div className="pt-8 border-t border-[#F0E8D9]">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#191C1E] mb-4">
-                  Key Technical Capabilities Delivered
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {project.keyFeatures.map((feat, idx) => (
+                {project.capabilityHeading && <h3 className="text-xs font-semibold uppercase tracking-wider text-[#191C1E] mb-4">{project.capabilityHeading}</h3>}
+                {capabilities.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {capabilities.map((capability, idx) => (
                     <div
-                      key={idx}
+                      key={`${capability.title}-${idx}`}
                       className="flex items-start gap-2.5 p-3.5 bg-[#FAF8F5] border border-[#E6DECE] rounded-xl text-xs text-[#52575E]"
                     >
                       <CheckCircle2 className="w-4 h-4 text-[#B58A3E] shrink-0 mt-0.5" />
-                      <span>{feat}</span>
+                      <span>
+                        <span className="block">{capability.title}</span>
+                        {capability.description && <span className="mt-1 block text-[#6B7280]">{capability.description}</span>}
+                      </span>
                     </div>
                   ))}
-                </div>
+                </div>}
               </div>
             )}
 
             {/* Tech Stack */}
-            <div className="pt-8 border-t border-[#F0E8D9]">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#191C1E] mb-3">
-                Core Technology Ecosystem
-              </h3>
+            {showTechnologies && <div className="pt-8 border-t border-[#F0E8D9]">
+              {project.technologyHeading && <h3 className="text-xs font-semibold uppercase tracking-wider text-[#191C1E] mb-3">{project.technologyHeading}</h3>}
               <div className="flex flex-wrap gap-2">
-                {project.technologies.map((t, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1.5 text-xs font-semibold bg-[#FAF6EE] text-[#806429] border border-[#E8DFC9] rounded-lg"
-                  >
-                    {t}
+                {technologyItems.map((technology, idx) => (
+                  <span key={`${technology.name}-${idx}`} className="flex items-center gap-1.5 rounded-lg border border-[#E8DFC9] bg-[#FAF6EE] px-3 py-1.5 text-xs font-semibold text-[#806429]">
+                    {technology.icon && <span aria-hidden="true">{technology.icon}</span>}
+                    {technology.name}
+                    {technology.category && <span className="font-normal text-[#6B7280]">{technology.category}</span>}
                   </span>
                 ))}
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* Associated Partner Banner if linked */}
@@ -321,7 +325,7 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
                 {currentProjectImages.map((img, idx) => (
                   <div
                     key={img.id}
-                    onClick={() => openLightboxAt(idx + 1)}
+                    onClick={() => openLightboxAt(idx + (coverImage ? 1 : 0))}
                     className="group bg-white rounded-2xl border border-[#E6DECE] overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col justify-between"
                   >
                     <div className="aspect-[16/10] bg-gray-50 overflow-hidden relative">
@@ -379,11 +383,9 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
                   >
                     <div>
                       <div className="aspect-[16/9] rounded-xl overflow-hidden mb-4 bg-gray-100">
-                        <img
-                          src={rel.thumbnail}
-                          alt={rel.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        {rel.thumbnail || rel.heroImageUrl ? (
+                          <img src={rel.thumbnail || rel.heroImageUrl} alt={rel.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        ) : <div className="flex h-full items-center justify-center text-xs text-[#6B7280]">No cover image</div>}
                       </div>
                       <span className="text-[11px] font-semibold text-[#806429] uppercase block mb-1">
                         {rel.category}
@@ -415,7 +417,7 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
               Ready to Engineer Your Next Digital Platform?
             </h3>
             <p className="text-xs sm:text-sm text-[#9CA3AF] max-w-lg mx-auto mb-6">
-              Our engineering leadership is ready to design a custom solution with strict type safety, sub-second latency, and light luxury aesthetics.
+              Our engineering team is ready to design a digital solution around your organization’s needs.
             </p>
             <button
               onClick={onNavigateContact}
@@ -431,14 +433,7 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
   }
 
   // Full Directory / Catalog View (/projects)
-  const categories = [
-    'All',
-    'Enterprise Web Application',
-    'Workflow Automation',
-    'Digital Platform',
-    'Mobile Applications',
-    'UI/UX Design',
-  ];
+  const categories = ['All', ...Array.from(new Set(activeProjects.map((project) => project.category).filter(Boolean))).sort()];
 
   const statuses = ['All', 'Live', 'Completed', 'In Development'];
 
@@ -528,12 +523,9 @@ export const ProjectsCatalog: React.FC<ProjectsCatalogProps> = ({
                     className="relative aspect-[16/10] overflow-hidden bg-[#F4EBD9]/40 border-b border-[#F0E8D9] cursor-pointer"
                     onClick={() => onSelectProject(project.slug)}
                   >
-                    <img
-                      src={project.thumbnail}
-                      alt={project.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                    />
+                    {project.thumbnail || project.heroImageUrl ? (
+                      <img src={project.thumbnail || project.heroImageUrl} alt={project.name} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                    ) : <div className="flex h-full items-center justify-center text-xs text-[#6B7280]">No cover image</div>}
                     <div className="absolute top-4 left-4 flex items-center gap-2 text-[11px] font-medium text-white bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
                       <span>{project.category}</span>
                     </div>

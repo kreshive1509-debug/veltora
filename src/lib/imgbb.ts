@@ -7,25 +7,22 @@ export async function uploadImageToImgBB(file: File): Promise<{ url: string; del
   const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
 
   if (apiKey && !apiKey.includes('placeholder')) {
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
+    const formData = new FormData();
+    formData.append('image', file);
 
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData,
-      });
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: 'POST',
+      body: formData,
+    });
 
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        return {
-          url: data.data.url,
-          deleteUrl: data.data.delete_url,
-        };
-      }
-    } catch (err) {
-      console.warn('ImgBB upload error, falling back to client storage:', err);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success || !data.data?.url) {
+      throw new Error(data?.error?.message || `ImgBB upload failed (HTTP ${res.status}).`);
     }
+    return {
+      url: data.data.url,
+      deleteUrl: data.data.delete_url,
+    };
   }
 
   // Fallback: Read as base64 Data URL

@@ -1,5 +1,94 @@
 import { supabase } from '../lib/supabase';
-import { Project, ProjectImage } from '../types';
+import { Project, ProjectCapability, ProjectImage, ProjectTechnology } from '../types';
+
+const readCapabilities = (value: unknown) => {
+  const settings = value && !Array.isArray(value) && typeof value === 'object'
+    ? value as { heading?: string; hideWhenEmpty?: boolean; items?: unknown[] }
+    : undefined;
+  const rows = Array.isArray(value) ? value : settings?.items || [];
+  const items = rows.flatMap((item): ProjectCapability[] => {
+    if (typeof item === 'string') return item.trim() ? [{ title: item }] : [];
+    if (!item || typeof item !== 'object') return [];
+    const capability = item as { title?: string; name?: string; description?: string };
+    const title = capability.title || capability.name || '';
+    return title.trim() ? [{ title, description: capability.description || undefined }] : [];
+  });
+  return {
+    items,
+    heading: settings?.heading || '',
+    hideWhenEmpty: settings?.hideWhenEmpty ?? true,
+  };
+};
+
+const readTechnologies = (value: unknown) => {
+  const settings = value && !Array.isArray(value) && typeof value === 'object'
+    ? value as { heading?: string; hideWhenEmpty?: boolean; items?: unknown[] }
+    : undefined;
+  const rows = Array.isArray(value) ? value : settings?.items || [];
+  const items = rows.flatMap((item): ProjectTechnology[] => {
+    if (typeof item === 'string') return item.trim() ? [{ name: item }] : [];
+    if (!item || typeof item !== 'object') return [];
+    const technology = item as { name?: string; icon?: string; category?: string };
+    return technology.name?.trim()
+      ? [{ name: technology.name, icon: technology.icon || undefined, category: technology.category || undefined }]
+      : [];
+  });
+  return {
+    items,
+    heading: settings?.heading || '',
+    hideWhenEmpty: settings?.hideWhenEmpty ?? true,
+  };
+};
+
+const mapProject = (p: any): Project => {
+  const capabilities = readCapabilities(p.key_features);
+  const technologies = readTechnologies(p.technologies);
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    client: p.client,
+    category: p.category,
+    year: p.year,
+    status: p.status,
+    shortDescription: p.short_description,
+    fullDescription: p.full_description,
+    thumbnail: p.thumbnail || '',
+    heroImageUrl: p.hero_image_url || undefined,
+    liveUrl: p.live_url || undefined,
+    githubUrl: p.github_url || undefined,
+    externalUrl: p.external_url || undefined,
+    caseStudyUrl: p.case_study_url || undefined,
+    technologies: technologies.items.map((technology) => technology.name),
+    technologyItems: technologies.items,
+    technologyHeading: technologies.heading,
+    hideTechnologiesWhenEmpty: technologies.hideWhenEmpty,
+    keyFeatures: capabilities.items.map((capability) => capability.title),
+    capabilities: capabilities.items,
+    capabilityHeading: capabilities.heading,
+    hideCapabilitiesWhenEmpty: capabilities.hideWhenEmpty,
+    projectChallenges: p.project_challenges || undefined,
+    projectSolution: p.project_solution || undefined,
+    projectOutcome: p.project_outcome || undefined,
+    partnerId: p.partner_id || undefined,
+    metrics: p.metrics || [],
+    isFeatured: p.is_featured,
+    isActive: p.is_active,
+    displayOrder: p.display_order,
+  };
+};
+
+const capabilityPayload = (project: Partial<Project>) => ({
+  heading: project.capabilityHeading || '',
+  hideWhenEmpty: project.hideCapabilitiesWhenEmpty ?? true,
+  items: project.capabilities || (project.keyFeatures || []).map((title) => ({ title })),
+});
+
+const technologyPayload = (project: Partial<Project>) => ({
+  heading: project.technologyHeading || '',
+  hideWhenEmpty: project.hideTechnologiesWhenEmpty ?? true,
+  items: project.technologyItems || (project.technologies || []).map((name) => ({ name })),
+});
 
 export const projectsService = {
   async getProjects(): Promise<Project[]> {
@@ -15,33 +104,7 @@ export const projectsService = {
     }
     if (!data) return [];
 
-    return data.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      client: p.client,
-      category: p.category || 'Web Development',
-      year: p.year || '2026',
-      status: p.status || 'Live',
-      shortDescription: p.short_description,
-      fullDescription: p.full_description,
-      thumbnail: p.thumbnail,
-      heroImageUrl: p.hero_image_url || undefined,
-      liveUrl: p.live_url || undefined,
-      githubUrl: p.github_url || undefined,
-      externalUrl: p.external_url || undefined,
-      caseStudyUrl: p.case_study_url || undefined,
-      technologies: p.technologies || [],
-      keyFeatures: p.key_features || [],
-      projectChallenges: p.project_challenges || undefined,
-      projectSolution: p.project_solution || undefined,
-      projectOutcome: p.project_outcome || undefined,
-      partnerId: p.partner_id || undefined,
-      metrics: p.metrics || [],
-      isFeatured: p.is_featured,
-      isActive: p.is_active,
-      displayOrder: p.display_order,
-    }));
+    return data.map(mapProject);
   },
 
   async addProject(project: Omit<Project, 'id'>): Promise<Project> {
@@ -63,8 +126,8 @@ export const projectsService = {
         github_url: project.githubUrl,
         external_url: project.externalUrl,
         case_study_url: project.caseStudyUrl,
-        technologies: project.technologies,
-        key_features: project.keyFeatures,
+        technologies: technologyPayload(project),
+        key_features: capabilityPayload(project),
         project_challenges: project.projectChallenges,
         project_solution: project.projectSolution,
         project_outcome: project.projectOutcome,
@@ -82,33 +145,7 @@ export const projectsService = {
       throw error;
     }
 
-    return {
-      id: data.id,
-      name: data.name,
-      slug: data.slug,
-      client: data.client,
-      category: data.category,
-      year: data.year,
-      status: data.status,
-      shortDescription: data.short_description,
-      fullDescription: data.full_description,
-      thumbnail: data.thumbnail,
-      heroImageUrl: data.hero_image_url || undefined,
-      liveUrl: data.live_url || undefined,
-      githubUrl: data.github_url || undefined,
-      externalUrl: data.external_url || undefined,
-      caseStudyUrl: data.case_study_url || undefined,
-      technologies: data.technologies || [],
-      keyFeatures: data.key_features || [],
-      projectChallenges: data.project_challenges || undefined,
-      projectSolution: data.project_solution || undefined,
-      projectOutcome: data.project_outcome || undefined,
-      partnerId: data.partner_id || undefined,
-      metrics: data.metrics || [],
-      isFeatured: data.is_featured,
-      isActive: data.is_active,
-      displayOrder: data.display_order,
-    };
+    return mapProject(data);
   },
 
   async updateProject(id: string, project: Partial<Project>): Promise<void> {
@@ -130,12 +167,16 @@ export const projectsService = {
     if (project.githubUrl !== undefined) payload.github_url = project.githubUrl;
     if (project.externalUrl !== undefined) payload.external_url = project.externalUrl;
     if (project.caseStudyUrl !== undefined) payload.case_study_url = project.caseStudyUrl;
-    if (project.technologies !== undefined) payload.technologies = project.technologies;
-    if (project.keyFeatures !== undefined) payload.key_features = project.keyFeatures;
+    if (project.technologies !== undefined || project.technologyItems !== undefined || project.technologyHeading !== undefined || project.hideTechnologiesWhenEmpty !== undefined) {
+      payload.technologies = technologyPayload(project);
+    }
+    if (project.keyFeatures !== undefined || project.capabilities !== undefined || project.capabilityHeading !== undefined || project.hideCapabilitiesWhenEmpty !== undefined) {
+      payload.key_features = capabilityPayload(project);
+    }
     if (project.projectChallenges !== undefined) payload.project_challenges = project.projectChallenges;
     if (project.projectSolution !== undefined) payload.project_solution = project.projectSolution;
     if (project.projectOutcome !== undefined) payload.project_outcome = project.projectOutcome;
-    if (project.partnerId !== undefined) payload.partner_id = project.partnerId;
+    if (project.partnerId !== undefined) payload.partner_id = project.partnerId || null;
     if (project.metrics !== undefined) payload.metrics = project.metrics;
     if (project.isFeatured !== undefined) payload.is_featured = project.isFeatured;
     if (project.isActive !== undefined) payload.is_active = project.isActive;
@@ -232,34 +273,40 @@ export const projectsService = {
   },
 
   async updateProjectImage(id: string, image: Partial<ProjectImage>): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) throw new Error('Supabase is not configured');
     const payload: Record<string, any> = {};
     if (image.imageUrl !== undefined) payload.image_url = image.imageUrl;
     if (image.altText !== undefined) payload.alt_text = image.altText;
     if (image.caption !== undefined) payload.caption = image.caption;
     if (image.displayOrder !== undefined) payload.display_order = image.displayOrder;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('project_images')
       .update(payload)
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error) {
       console.error(`Error updating project image ${id}:`, error);
       throw error;
     }
+    if (!data) throw new Error(`Project image ${id} was not updated`);
   },
 
   async deleteProjectImage(id: string): Promise<void> {
-    if (!supabase) return;
-    const { error } = await supabase
+    if (!supabase) throw new Error('Supabase is not configured');
+    const { data, error } = await supabase
       .from('project_images')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error) {
       console.error(`Error deleting project image ${id}:`, error);
       throw error;
     }
+    if (!data) throw new Error(`Project image ${id} was not deleted`);
   },
 };

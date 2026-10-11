@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCms } from '../../context/CmsContext';
-import { Project, ProjectImage, ProjectStatus } from '../../types';
+import { Project, ProjectCapability, ProjectImage, ProjectStatus, ProjectTechnology } from '../../types';
 import { uploadImageToImgBB } from '../../lib/imgbb';
 import {
   Plus,
@@ -10,9 +10,6 @@ import {
   Image as ImageIcon,
   Upload,
   ExternalLink,
-  Layers,
-  X,
-  Check,
 } from 'lucide-react';
 
 const getErrorMessage = (error: unknown): string => {
@@ -45,39 +42,103 @@ export const AdminProjects: React.FC = () => {
 
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'basic' | 'media' | 'capabilities' | 'technologies' | 'links'>('basic');
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [pendingGalleryFiles, setPendingGalleryFiles] = useState<Array<{ file: File; previewUrl: string; caption: string }>>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingProject, setSavingProject] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
-  const [newImageCaption, setNewImageCaption] = useState('');
   const [operationError, setOperationError] = useState<string | null>(null);
   const [operationNotice, setOperationNotice] = useState<string | null>(null);
 
   const currentProjectId = editingProject?.id;
   const currentImages = currentProjectId
-    ? projectImages.filter((img) => img.projectId === currentProjectId)
+    ? projectImages.filter((img) => img.projectId === currentProjectId).sort((a, b) => a.displayOrder - b.displayOrder)
     : [];
+
+  const releasePreviews = () => {
+    if (coverPreview?.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+    pendingGalleryFiles.forEach((image) => URL.revokeObjectURL(image.previewUrl));
+    setCoverFile(null);
+    setCoverPreview(null);
+    setPendingGalleryFiles([]);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProject || savingProject) return;
 
+    const missingFields = [
+      ['name', 'project title'],
+      ['slug', 'slug'],
+      ['client', 'client or organization'],
+      ['category', 'category'],
+      ['shortDescription', 'short description'],
+      ['fullDescription', 'full description'],
+    ].filter(([field]) => !String(editingProject[field as keyof Project] || '').trim()).map(([, label]) => label);
+    if (missingFields.length) {
+      setActiveTab('basic');
+      setOperationError(`Complete the required fields: ${missingFields.join(', ')}.`);
+      return;
+    }
+
     setSavingProject(true);
     setOperationError(null);
     setOperationNotice(null);
+    let projectRecordSaved = false;
     try {
-      if (isCreating) {
-        const { id, ...rest } = editingProject;
-        await addProject(rest);
-        setOperationNotice('Project created successfully.');
-      } else {
-        await updateProject(editingProject.id, editingProject);
-        setOperationNotice('Project updated successfully.');
+      let projectToSave = editingProject;
+      if (coverFile) {
+        setUploadingImage(true);
+        const uploadedCover = await uploadImageToImgBB(coverFile);
+        projectToSave = { ...projectToSave, thumbnail: uploadedCover.url, heroImageUrl: uploadedCover.url };
       }
+
+      let savedProjectId = editingProject.id;
+      if (isCreating) {
+        const { id, ...newProject } = projectToSave;
+        savedProjectId = await addProject(newProject);
+        projectRecordSaved = true;
+        projectToSave = { ...projectToSave, id: savedProjectId };
+        setEditingProject(projectToSave);
+        setIsCreating(false);
+      } else {
+        await updateProject(editingProject.id, projectToSave);
+        projectRecordSaved = true;
+        setEditingProject(projectToSave);
+      }
+      if (coverFile) {
+        if (coverPreview?.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+        setCoverFile(null);
+        setCoverPreview(projectToSave.thumbnail || null);
+      }
+
+      for (const image of pendingGalleryFiles) {
+        setUploadingImage(true);
+        const uploadedImage = await uploadImageToImgBB(image.file);
+        await addProjectImage({
+          projectId: savedProjectId,
+          imageUrl: uploadedImage.url,
+          altText: image.caption || `${projectToSave.name} screenshot`,
+          caption: image.caption,
+          displayOrder: currentImages.length + pendingGalleryFiles.indexOf(image) + 1,
+        });
+        URL.revokeObjectURL(image.previewUrl);
+        setPendingGalleryFiles((previous) => previous.filter((pending) => pending.previewUrl !== image.previewUrl));
+      }
+
+      setOperationNotice(isCreating ? 'Project created successfully.' : 'Project updated successfully.');
+      releasePreviews();
       setEditingProject(null);
       setIsCreating(false);
     } catch (error) {
-      setOperationError(`Project could not be saved: ${getErrorMessage(error)}`);
+      const action = projectRecordSaved
+        ? 'Project record saved, but an image could not be uploaded or linked'
+        : isCreating ? 'Project could not be saved' : 'Project changes could not be saved';
+      setOperationError(`${action}: ${getErrorMessage(error)}`);
     } finally {
+      setUploadingImage(false);
       setSavingProject(false);
     }
   };
@@ -85,6 +146,8 @@ export const AdminProjects: React.FC = () => {
   const startCreate = () => {
     setOperationError(null);
     setOperationNotice(null);
+    releasePreviews();
+    setActiveTab('basic');
     setIsCreating(true);
     setEditingProject({
       id: 'temp',
@@ -96,49 +159,79 @@ export const AdminProjects: React.FC = () => {
       status: 'Live',
       shortDescription: '',
       fullDescription: '',
-      thumbnail: '/src/assets/images/project_saas_platform_1791103524205.jpg',
-      heroImageUrl: '/src/assets/images/project_saas_platform_1791103524205.jpg',
+      thumbnail: '',
+      heroImageUrl: '',
       liveUrl: '',
       githubUrl: '',
       externalUrl: '',
       caseStudyUrl: '',
-      technologies: ['React 19', 'TypeScript', 'Tailwind CSS', 'Supabase'],
-      keyFeatures: ['Sub-second latency', 'Automated workflows'],
+      technologies: [],
+      keyFeatures: [],
+      technologyItems: [],
+      technologyHeading: '',
+      hideTechnologiesWhenEmpty: true,
+      capabilities: [],
+      capabilityHeading: '',
+      hideCapabilitiesWhenEmpty: true,
       projectChallenges: '',
       projectSolution: '',
       projectOutcome: '',
       partnerId: '',
-      isFeatured: true,
-      isActive: true,
+      isFeatured: false,
+      isActive: false,
       displayOrder: projects.length + 1,
-      metrics: [{ label: 'Speedup', value: '3x' }],
+      metrics: [],
     });
   };
 
-  const handleUploadGalleryImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.currentTarget;
-    const file = e.target.files?.[0];
-    if (!file || !editingProject) return;
+  const handleSelectGalleryImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.currentTarget.files || []);
+    if (!files.length) return;
+    setPendingGalleryFiles((previous) => [
+      ...previous,
+      ...files.map((file) => ({ file, previewUrl: URL.createObjectURL(file), caption: '' })),
+    ]);
+    e.currentTarget.value = '';
+  };
 
-    setUploadingImage(true);
+  const handleSelectCover = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+    if (coverPreview?.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
     setOperationError(null);
-    setOperationNotice(null);
+    e.currentTarget.value = '';
+  };
+
+  const removePendingGalleryImage = (previewUrl: string) => {
+    URL.revokeObjectURL(previewUrl);
+    setPendingGalleryFiles((previous) => previous.filter((image) => image.previewUrl !== previewUrl));
+  };
+
+  const handleUpdateImageCaption = async (image: ProjectImage, caption: string) => {
+    if (caption === (image.caption || '')) return;
+    setOperationError(null);
     try {
-      const res = await uploadImageToImgBB(file);
-      await addProjectImage({
-        projectId: editingProject.id,
-        imageUrl: res.url,
-        altText: newImageCaption || `${editingProject.name} screenshot`,
-        caption: newImageCaption || '',
-        displayOrder: currentImages.length + 1,
-      });
-      setNewImageCaption('');
-      setOperationNotice('Project image uploaded and linked successfully.');
+      await updateProjectImage(image.id, { caption, altText: caption || image.altText });
+      setOperationNotice('Screenshot caption updated.');
     } catch (error) {
-      setOperationError(`Project image could not be saved: ${getErrorMessage(error)}`);
-    } finally {
-      setUploadingImage(false);
-      input.value = '';
+      setOperationError(`Screenshot caption could not be saved: ${getErrorMessage(error)}`);
+    }
+  };
+
+  const moveProjectImage = async (image: ProjectImage, direction: -1 | 1) => {
+    const index = currentImages.findIndex((current) => current.id === image.id);
+    const target = currentImages[index + direction];
+    if (!target) return;
+    const reordered = [...currentImages];
+    [reordered[index], reordered[index + direction]] = [reordered[index + direction], reordered[index]];
+    setOperationError(null);
+    try {
+      await Promise.all(reordered.map((current, order) => updateProjectImage(current.id, { displayOrder: order + 1 })));
+      setOperationNotice('Project gallery order updated.');
+    } catch (error) {
+      setOperationError(`Gallery order could not be saved: ${getErrorMessage(error)}`);
     }
   };
 
@@ -198,7 +291,9 @@ export const AdminProjects: React.FC = () => {
             </h3>
             <button
               type="button"
+              disabled={savingProject}
               onClick={() => {
+                releasePreviews();
                 setEditingProject(null);
                 setIsCreating(false);
                 setOperationError(null);
@@ -209,7 +304,28 @@ export const AdminProjects: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div role="tablist" aria-label="Project details" className="flex flex-wrap gap-2 border-b border-[#E6DECE] pb-4">
+            {([
+              ['basic', 'Basic Information'],
+              ['media', 'Cover Image & Gallery'],
+              ['capabilities', 'Technical Capabilities'],
+              ['technologies', 'Technology Stack'],
+              ['links', 'Links & Project Status'],
+            ] as const).map(([tab, label]) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${activeTab === tab ? 'border-[#B58A3E] text-[#191C1E]' : 'border-transparent text-[#6B7280] hover:text-[#191C1E]'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'basic' && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#191C1E] mb-1">Project Name *</label>
               <input
@@ -244,9 +360,9 @@ export const AdminProjects: React.FC = () => {
                 className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
               />
             </div>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {activeTab === 'basic' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#191C1E] mb-1">Category</label>
               <input
@@ -256,22 +372,6 @@ export const AdminProjects: React.FC = () => {
                 onChange={(e) => setEditingProject({ ...editingProject, category: e.target.value })}
                 className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#191C1E] mb-1">Status</label>
-              <select
-                value={editingProject.status}
-                onChange={(e) =>
-                  setEditingProject({ ...editingProject, status: e.target.value as ProjectStatus })
-                }
-                className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
-              >
-                <option value="Live">Live</option>
-                <option value="Completed">Completed</option>
-                <option value="In Development">In Development</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Archived">Archived</option>
-              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-[#191C1E] mb-1">Associated Partner</label>
@@ -288,9 +388,23 @@ export const AdminProjects: React.FC = () => {
                 ))}
               </select>
             </div>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {activeTab === 'links' && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[#191C1E] mb-1">Project Status</label>
+              <select
+                value={editingProject.status}
+                onChange={(e) => setEditingProject({ ...editingProject, status: e.target.value as ProjectStatus })}
+                className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
+              >
+                <option value="Live">Live</option>
+                <option value="Completed">Completed</option>
+                <option value="In Development">In Development</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-[#191C1E] mb-1">Live Website URL</label>
               <input
@@ -319,31 +433,48 @@ export const AdminProjects: React.FC = () => {
                 className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
               />
             </div>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {activeTab === 'media' && <section className="space-y-4 rounded-xl border border-[#E6DECE] bg-white p-4">
             <div>
-              <label className="block text-xs font-semibold text-[#191C1E] mb-1">Thumbnail URL</label>
-              <input
-                type="text"
-                required
-                value={editingProject.thumbnail}
-                onChange={(e) => setEditingProject({ ...editingProject, thumbnail: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
-              />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#191C1E]">Project Cover Image</h4>
+              <p className="mt-1 text-xs text-[#6B7280]">Used on project cards and the project details page.</p>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#191C1E] mb-1">Hero Image URL</label>
-              <input
-                type="text"
-                value={editingProject.heroImageUrl || ''}
-                onChange={(e) => setEditingProject({ ...editingProject, heroImageUrl: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
+            {(coverPreview || editingProject.thumbnail || editingProject.heroImageUrl) ? (
+              <img
+                src={coverPreview || editingProject.thumbnail || editingProject.heroImageUrl}
+                alt={`${editingProject.name || 'Project'} cover preview`}
+                className="aspect-video w-full max-w-2xl rounded-lg border border-[#E6DECE] bg-[#FAF8F5] object-cover"
               />
+            ) : (
+              <div className="flex aspect-video w-full max-w-2xl items-center justify-center rounded-lg border border-dashed border-[#D8D0C1] bg-[#FAF8F5] text-sm text-[#6B7280]">
+                <ImageIcon className="mr-2 h-5 w-5" /> No cover image
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#191C1E] px-3 py-2 text-xs font-semibold text-white">
+                <Upload className="h-3.5 w-3.5 text-[#C59A4E]" />
+                {coverFile ? 'Replace selected image' : 'Upload cover image'}
+                <input type="file" accept="image/*" onChange={handleSelectCover} className="hidden" />
+              </label>
+              {(coverPreview || editingProject.thumbnail || editingProject.heroImageUrl) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (coverPreview?.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+                    setCoverFile(null);
+                    setCoverPreview(null);
+                    setEditingProject({ ...editingProject, thumbnail: '', heroImageUrl: '' });
+                  }}
+                  className="rounded-lg border border-[#E6DECE] px-3 py-2 text-xs text-[#6B7280] hover:text-red-700"
+                >
+                  Remove cover
+                </button>
+              )}
             </div>
-          </div>
+          </section>}
 
-          <div>
+          {activeTab === 'basic' && <div>
             <label className="block text-xs font-semibold text-[#191C1E] mb-1">Short Summary (1-2 sentences)</label>
             <input
               type="text"
@@ -352,9 +483,9 @@ export const AdminProjects: React.FC = () => {
               onChange={(e) => setEditingProject({ ...editingProject, shortDescription: e.target.value })}
               className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg"
             />
-          </div>
+          </div>}
 
-          <div>
+          {activeTab === 'basic' && <div>
             <label className="block text-xs font-semibold text-[#191C1E] mb-1">Full Detailed Narrative</label>
             <textarea
               rows={3}
@@ -363,9 +494,9 @@ export const AdminProjects: React.FC = () => {
               onChange={(e) => setEditingProject({ ...editingProject, fullDescription: e.target.value })}
               className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg resize-none"
             />
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {activeTab === 'basic' && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#191C1E] mb-1">Challenges</label>
               <textarea
@@ -393,9 +524,9 @@ export const AdminProjects: React.FC = () => {
                 className="w-full px-3 py-2 text-xs bg-white border border-[#E6DECE] rounded-lg resize-none"
               />
             </div>
-          </div>
+          </div>}
 
-          <div className="flex items-center gap-6 pt-2">
+          {activeTab === 'links' && <div className="flex items-center gap-6 pt-2">
             <label className="flex items-center gap-2 text-xs text-[#191C1E] cursor-pointer">
               <input
                 type="checkbox"
@@ -412,76 +543,171 @@ export const AdminProjects: React.FC = () => {
               />
               <span>Is Active (Publicly visible)</span>
             </label>
-          </div>
+          </div>}
 
-          {/* Multi-Image Gallery Manager (For existing projects) */}
-          {!isCreating && (
+          {activeTab === 'media' && (
             <div className="p-4 bg-white rounded-xl border border-[#E6DECE] space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-[#191C1E] uppercase tracking-wider">
-                  Project Gallery Screenshots ({currentImages.length})
+                  Project Gallery Screenshots ({currentImages.length + pendingGalleryFiles.length})
                 </h4>
               </div>
 
-              {/* Upload Screenshot */}
               <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-[#FAF8F5] rounded-xl border border-[#E6DECE]">
-                <input
-                  type="text"
-                  placeholder="Screenshot caption / label..."
-                  value={newImageCaption}
-                  onChange={(e) => setNewImageCaption(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-white border border-[#E6DECE] rounded-lg"
-                />
                 <label className="px-3.5 py-1.5 text-xs font-semibold bg-[#191C1E] text-white rounded-lg cursor-pointer flex items-center gap-1.5 shrink-0">
                   <Upload className="w-3.5 h-3.5 text-[#C59A4E]" />
-                  <span>{uploadingImage ? 'Uploading...' : 'Upload Image'}</span>
+                  <span>Add screenshots</span>
                   <input
                     type="file"
                     accept="image/*"
-                    disabled={uploadingImage}
-                    onChange={handleUploadGalleryImage}
+                    multiple
+                    disabled={savingProject}
+                    onChange={handleSelectGalleryImages}
                     className="hidden"
                   />
                 </label>
+                <span className="text-xs text-[#6B7280]">Selected files upload when you save the project.</span>
               </div>
 
-              {/* Current Images List */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {currentImages.map((img) => (
-                  <div key={img.id} className="relative aspect-[16/10] bg-gray-100 rounded-lg overflow-hidden border border-[#E6DECE] group">
-                    <img src={img.imageUrl} alt={img.caption || 'Screenshot'} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        setOperationError(null);
-                        setOperationNotice(null);
-                        try {
-                          await deleteProjectImage(img.id);
-                          setOperationNotice('Project image deleted successfully.');
-                        } catch (error) {
-                          setOperationError(`Project image could not be deleted: ${getErrorMessage(error)}`);
-                        }
-                      }}
-                      className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Remove image"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    {img.caption && (
-                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] p-1 truncate text-center">
-                        {img.caption}
-                      </span>
-                    )}
+                  <div key={img.id} className="overflow-hidden rounded-lg border border-[#E6DECE] bg-white">
+                    <div className="relative aspect-16/10 bg-gray-100">
+                      <img src={img.imageUrl} alt={img.altText || img.caption || 'Project screenshot'} className="h-full w-full object-cover" />
+                    </div>
+                    <input
+                      type="text"
+                      aria-label="Screenshot caption"
+                      defaultValue={img.caption || ''}
+                      onBlur={(e) => void handleUpdateImageCaption(img, e.target.value)}
+                      className="w-full border-b border-[#E6DECE] px-2 py-1.5 text-[11px]"
+                      placeholder="Caption"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-1 p-1.5">
+                      <div className="flex gap-1">
+                        <button type="button" disabled={currentImages[0]?.id === img.id} onClick={() => void moveProjectImage(img, -1)} className="rounded border border-[#E6DECE] px-1.5 py-1 text-[10px] disabled:opacity-40" aria-label="Move screenshot earlier">Up</button>
+                        <button type="button" disabled={currentImages[currentImages.length - 1]?.id === img.id} onClick={() => void moveProjectImage(img, 1)} className="rounded border border-[#E6DECE] px-1.5 py-1 text-[10px] disabled:opacity-40" aria-label="Move screenshot later">Down</button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (coverPreview?.startsWith('blob:')) URL.revokeObjectURL(coverPreview);
+                          setCoverFile(null);
+                          setCoverPreview(img.imageUrl);
+                          setEditingProject({ ...editingProject, thumbnail: img.imageUrl, heroImageUrl: img.imageUrl });
+                        }}
+                        className="px-1.5 py-1 text-[10px] font-semibold text-[#806429]"
+                      >
+                        Use as cover
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setOperationError(null);
+                          try {
+                            await deleteProjectImage(img.id);
+                            setOperationNotice('Project image deleted successfully.');
+                          } catch (error) {
+                            setOperationError(`Project image could not be deleted: ${getErrorMessage(error)}`);
+                          }
+                        }}
+                        className="p-1 text-red-700"
+                        title="Remove image"
+                        aria-label="Remove project screenshot"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {pendingGalleryFiles.map((image, index) => (
+                  <div key={image.previewUrl} className="overflow-hidden rounded-lg border border-dashed border-[#C59A4E] bg-white">
+                    <div className="relative aspect-16/10 bg-gray-100">
+                      <img src={image.previewUrl} alt={image.caption || 'Selected project screenshot preview'} className="h-full w-full object-cover" />
+                    </div>
+                    <input
+                      type="text"
+                      aria-label="New screenshot caption"
+                      value={image.caption}
+                      onChange={(e) => setPendingGalleryFiles((previous) => previous.map((item) => item.previewUrl === image.previewUrl ? { ...item, caption: e.target.value } : item))}
+                      className="w-full border-b border-[#E6DECE] px-2 py-1.5 text-[11px]"
+                      placeholder="Caption"
+                    />
+                    <div className="flex items-center justify-between gap-1 p-1.5">
+                      <div className="flex gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => setPendingGalleryFiles((previous) => { const next = [...previous]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} className="rounded border border-[#E6DECE] px-1.5 py-1 text-[10px] disabled:opacity-40">Up</button>
+                        <button type="button" disabled={index === pendingGalleryFiles.length - 1} onClick={() => setPendingGalleryFiles((previous) => { const next = [...previous]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })} className="rounded border border-[#E6DECE] px-1.5 py-1 text-[10px] disabled:opacity-40">Down</button>
+                      </div>
+                      <button type="button" onClick={() => { if (coverPreview?.startsWith('blob:') && coverPreview !== image.previewUrl) URL.revokeObjectURL(coverPreview); setCoverFile(image.file); setCoverPreview(image.previewUrl); setEditingProject({ ...editingProject, thumbnail: '', heroImageUrl: '' }); }} className="px-1.5 py-1 text-[10px] font-semibold text-[#806429]">Use as cover</button>
+                      <button type="button" onClick={() => removePendingGalleryImage(image.previewUrl)} className="p-1 text-red-700" aria-label="Remove selected screenshot"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {activeTab === 'capabilities' && <section className="space-y-4 rounded-xl border border-[#E6DECE] bg-white p-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#191C1E]">Section heading</label>
+              <input type="text" value={editingProject.capabilityHeading || ''} onChange={(e) => setEditingProject({ ...editingProject, capabilityHeading: e.target.value })} className="w-full rounded-lg border border-[#E6DECE] px-3 py-2 text-xs" />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-[#191C1E]">
+              <input type="checkbox" checked={editingProject.hideCapabilitiesWhenEmpty ?? true} onChange={(e) => setEditingProject({ ...editingProject, hideCapabilitiesWhenEmpty: e.target.checked })} />
+              Hide section when it has no items
+            </label>
+            {(editingProject.capabilities || editingProject.keyFeatures.map((title): ProjectCapability => ({ title }))).map((capability, index, items) => (
+              <div key={`${index}-${capability.title}`} className="grid grid-cols-1 gap-2 rounded-lg border border-[#E6DECE] p-3 sm:grid-cols-[1fr_1.5fr_auto]">
+                <input type="text" aria-label="Capability title" value={capability.title} onChange={(e) => setEditingProject({ ...editingProject, capabilities: items.map((item, itemIndex) => itemIndex === index ? { ...item, title: e.target.value } : item), keyFeatures: items.map((item, itemIndex) => itemIndex === index ? e.target.value : item.title) })} className="rounded border border-[#E6DECE] px-2 py-1.5 text-xs" placeholder="Capability" />
+                <input type="text" aria-label="Capability description" value={capability.description || ''} onChange={(e) => setEditingProject({ ...editingProject, capabilities: items.map((item, itemIndex) => itemIndex === index ? { ...item, description: e.target.value } : item) })} className="rounded border border-[#E6DECE] px-2 py-1.5 text-xs" placeholder="Optional description" />
+                <div className="flex gap-1">
+                  <button type="button" disabled={index === 0} onClick={() => { const next = [...items]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setEditingProject({ ...editingProject, capabilities: next, keyFeatures: next.map((item) => item.title) }); }} className="rounded border border-[#E6DECE] px-2 text-xs disabled:opacity-40">Up</button>
+                  <button type="button" disabled={index === items.length - 1} onClick={() => { const next = [...items]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; setEditingProject({ ...editingProject, capabilities: next, keyFeatures: next.map((item) => item.title) }); }} className="rounded border border-[#E6DECE] px-2 text-xs disabled:opacity-40">Down</button>
+                  <button type="button" onClick={() => { const next = items.filter((_, itemIndex) => itemIndex !== index); setEditingProject({ ...editingProject, capabilities: next, keyFeatures: next.map((item) => item.title) }); }} className="p-2 text-red-700" aria-label="Remove capability"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={() => { const items = editingProject.capabilities || editingProject.keyFeatures.map((title) => ({ title })); setEditingProject({ ...editingProject, capabilities: [...items, { title: '' }], keyFeatures: [...items.map((item) => item.title), ''] }); }} className="rounded-lg border border-[#E6DECE] px-3 py-2 text-xs font-semibold">Add capability</button>
+          </section>}
+
+          {activeTab === 'technologies' && <section className="space-y-4 rounded-xl border border-[#E6DECE] bg-white p-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#191C1E]">Section heading</label>
+              <input type="text" value={editingProject.technologyHeading || ''} onChange={(e) => setEditingProject({ ...editingProject, technologyHeading: e.target.value })} className="w-full rounded-lg border border-[#E6DECE] px-3 py-2 text-xs" />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-[#191C1E]">
+              <input type="checkbox" checked={editingProject.hideTechnologiesWhenEmpty ?? true} onChange={(e) => setEditingProject({ ...editingProject, hideTechnologiesWhenEmpty: e.target.checked })} />
+              Hide section when it has no items
+            </label>
+            {(editingProject.technologyItems || editingProject.technologies.map((name): ProjectTechnology => ({ name }))).map((technology, index, items) => (
+              <div key={`${index}-${technology.name}`} className="grid grid-cols-1 gap-2 rounded-lg border border-[#E6DECE] p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <input type="text" aria-label="Technology name" value={technology.name} onChange={(e) => setEditingProject({ ...editingProject, technologyItems: items.map((item, itemIndex) => itemIndex === index ? { ...item, name: e.target.value } : item), technologies: items.map((item, itemIndex) => itemIndex === index ? e.target.value : item.name) })} className="rounded border border-[#E6DECE] px-2 py-1.5 text-xs" placeholder="Technology" />
+                <input type="text" aria-label="Technology icon" value={technology.icon || ''} onChange={(e) => setEditingProject({ ...editingProject, technologyItems: items.map((item, itemIndex) => itemIndex === index ? { ...item, icon: e.target.value } : item) })} className="rounded border border-[#E6DECE] px-2 py-1.5 text-xs" placeholder="Optional icon or icon name" />
+                <input type="text" aria-label="Technology category" value={technology.category || ''} onChange={(e) => setEditingProject({ ...editingProject, technologyItems: items.map((item, itemIndex) => itemIndex === index ? { ...item, category: e.target.value } : item) })} className="rounded border border-[#E6DECE] px-2 py-1.5 text-xs" placeholder="Optional category" />
+                <div className="flex gap-1">
+                  <button type="button" disabled={index === 0} onClick={() => { const next = [...items]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setEditingProject({ ...editingProject, technologyItems: next, technologies: next.map((item) => item.name) }); }} className="rounded border border-[#E6DECE] px-2 text-xs disabled:opacity-40">Up</button>
+                  <button type="button" disabled={index === items.length - 1} onClick={() => { const next = [...items]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; setEditingProject({ ...editingProject, technologyItems: next, technologies: next.map((item) => item.name) }); }} className="rounded border border-[#E6DECE] px-2 text-xs disabled:opacity-40">Down</button>
+                  <button type="button" onClick={() => { const next = items.filter((_, itemIndex) => itemIndex !== index); setEditingProject({ ...editingProject, technologyItems: next, technologies: next.map((item) => item.name) }); }} className="p-2 text-red-700" aria-label="Remove technology"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={() => { const items = editingProject.technologyItems || editingProject.technologies.map((name) => ({ name })); setEditingProject({ ...editingProject, technologyItems: [...items, { name: '' }], technologies: [...items.map((item) => item.name), ''] }); }} className="rounded-lg border border-[#E6DECE] px-3 py-2 text-xs font-semibold">Add technology</button>
+          </section>}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-[#E6DECE]">
             <button
               type="button"
+              disabled={isCreating || !editingProject.slug}
+              onClick={() => window.open(`/projects/${editingProject.slug}?preview=1`, '_blank', 'noopener,noreferrer')}
+              className="px-4 py-2 text-xs font-semibold text-[#191C1E] disabled:opacity-40"
+            >
+              Preview saved project
+            </button>
+            <button
+              type="button"
+              disabled={savingProject}
               onClick={() => {
+                releasePreviews();
                 setEditingProject(null);
                 setIsCreating(false);
                 setOperationError(null);
@@ -502,7 +728,9 @@ export const AdminProjects: React.FC = () => {
         </form>
       ) : (
         <div className="space-y-3">
-          {projects.map((p) => {
+          {projects.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#D8D0C1] px-4 py-10 text-center text-sm text-[#6B7280]">No projects have been added yet.</p>
+          ) : projects.map((p) => {
             const count = projectImages.filter((img) => img.projectId === p.id).length;
             return (
               <div
@@ -510,11 +738,11 @@ export const AdminProjects: React.FC = () => {
                 className="p-4 bg-[#FAF8F5] border border-[#E6DECE] rounded-2xl flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={p.thumbnail}
-                    alt={p.name}
-                    className="w-12 h-12 rounded-lg object-cover border border-[#E6DECE] shrink-0"
-                  />
+                  {p.thumbnail || p.heroImageUrl ? (
+                    <img src={p.thumbnail || p.heroImageUrl} alt={p.name} className="w-12 h-12 rounded-lg object-cover border border-[#E6DECE] shrink-0" />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#E6DECE] bg-white"><ImageIcon className="h-4 w-4 text-[#9CA3AF]" /></div>
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-xs font-bold text-[#191C1E] truncate">{p.name}</span>
@@ -543,6 +771,8 @@ export const AdminProjects: React.FC = () => {
                   )}
                   <button
                     onClick={() => {
+                      releasePreviews();
+                      setActiveTab('basic');
                       setOperationError(null);
                       setOperationNotice(null);
                       setIsCreating(false);

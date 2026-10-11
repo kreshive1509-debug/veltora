@@ -211,6 +211,17 @@ export interface ProjectImage {
   createdAt?: string;
 }
 
+export interface ProjectCapability {
+  title: string;
+  description?: string;
+}
+
+export interface ProjectTechnology {
+  name: string;
+  icon?: string;
+  category?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -229,6 +240,12 @@ export interface Project {
   caseStudyUrl?: string;
   technologies: string[];
   keyFeatures: string[];
+  technologyItems?: ProjectTechnology[];
+  technologyHeading?: string;
+  hideTechnologiesWhenEmpty?: boolean;
+  capabilities?: ProjectCapability[];
+  capabilityHeading?: string;
+  hideCapabilitiesWhenEmpty?: boolean;
   projectChallenges?: string;
   projectSolution?: string;
   projectOutcome?: string;

@@ -54,12 +54,16 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             >
               {/* Media Column */}
               <div className="lg:col-span-6 relative overflow-hidden bg-[#F4EBD9]/40 border-b lg:border-b-0 lg:border-r border-[#F0E8D9] min-h-[280px]">
-                <img
-                  src={project.thumbnail}
-                  alt={project.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
+                {project.thumbnail || project.heroImageUrl ? (
+                  <img
+                    src={project.thumbnail || project.heroImageUrl}
+                    alt={project.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-xs text-[#6B7280]">No cover image</div>
+                )}
                 <div className="absolute top-4 left-4 flex items-center gap-2 text-[11px] font-medium text-white bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
                   <span>{project.category}</span>
                   <span aria-hidden="true">·</span>
@@ -103,16 +107,14 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
                   )}
 
                   {/* Technology Tags (Clean unboxed with slashes) */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#6B7280] mb-6">
+                  {project.technologies.length > 0 && <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-[#6B7280]">
                     {project.technologies.map((tech, tIdx) => (
                       <React.Fragment key={tIdx}>
                         <span>{tech}</span>
-                        {tIdx < project.technologies.length - 1 && (
-                          <span className="text-[#C59A4E]" aria-hidden="true">/</span>
-                        )}
+                        {tIdx < project.technologies.length - 1 && <span className="text-[#C59A4E]" aria-hidden="true">/</span>}
                       </React.Fragment>
                     ))}
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Bottom Action Triggers */}
