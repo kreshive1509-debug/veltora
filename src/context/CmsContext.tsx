@@ -664,15 +664,15 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     await projectsService.updateProject(id, updates);
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     logAction('UPDATE', 'Project', `Updated project`, id);
   };
 
   const deleteProject = async (id: string) => {
+    await projectsService.deleteProject(id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
     setProjectImages((prev) => prev.filter((img) => img.projectId !== id));
-    await projectsService.deleteProject(id);
     logAction('DELETE', 'Project', `Deleted project`, id);
   };
 
@@ -683,14 +683,14 @@ export function CmsProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProjectImage = async (id: string, updates: Partial<ProjectImage>) => {
-    setProjectImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...updates } : img)));
     await projectsService.updateProjectImage(id, updates);
+    setProjectImages((prev) => prev.map((img) => (img.id === id ? { ...img, ...updates } : img)));
     logAction('UPDATE', 'Project Image', `Updated photo metadata`, id);
   };
 
   const deleteProjectImage = async (id: string) => {
-    setProjectImages((prev) => prev.filter((img) => img.id !== id));
     await projectsService.deleteProjectImage(id);
+    setProjectImages((prev) => prev.filter((img) => img.id !== id));
     logAction('DELETE', 'Project Image', `Removed image from project`, id);
   };
 

@@ -15,6 +15,21 @@ import {
   Check,
 } from 'lucide-react';
 
+const getErrorMessage = (error: unknown): string => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const databaseError = error as {
+      code?: string;
+      message: string;
+      details?: string;
+      hint?: string;
+    };
+    return [databaseError.code, databaseError.message, databaseError.details, databaseError.hint]
+      .filter(Boolean)
+      .join(': ');
+  }
+  return error instanceof Error ? error.message : String(error);
+};
+
 export const AdminProjects: React.FC = () => {
   const {
     projects,
@@ -31,29 +46,45 @@ export const AdminProjects: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [newImageCaption, setNewImageCaption] = useState('');
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [operationNotice, setOperationNotice] = useState<string | null>(null);
 
   const currentProjectId = editingProject?.id;
   const currentImages = currentProjectId
     ? projectImages.filter((img) => img.projectId === currentProjectId)
     : [];
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProject) return;
+    if (!editingProject || savingProject) return;
 
-    if (isCreating) {
-      const { id, ...rest } = editingProject;
-      const newId = addProject(rest);
+    setSavingProject(true);
+    setOperationError(null);
+    setOperationNotice(null);
+    try {
+      if (isCreating) {
+        const { id, ...rest } = editingProject;
+        await addProject(rest);
+        setOperationNotice('Project created successfully.');
+      } else {
+        await updateProject(editingProject.id, editingProject);
+        setOperationNotice('Project updated successfully.');
+      }
       setEditingProject(null);
-    } else {
-      updateProject(editingProject.id, editingProject);
-      setEditingProject(null);
+      setIsCreating(false);
+    } catch (error) {
+      setOperationError(`Project could not be saved: ${getErrorMessage(error)}`);
+    } finally {
+      setSavingProject(false);
     }
-    setIsCreating(false);
   };
 
   const startCreate = () => {
+    setOperationError(null);
+    setOperationNotice(null);
     setIsCreating(true);
     setEditingProject({
       id: 'temp',
@@ -85,13 +116,16 @@ export const AdminProjects: React.FC = () => {
   };
 
   const handleUploadGalleryImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     if (!file || !editingProject) return;
 
     setUploadingImage(true);
+    setOperationError(null);
+    setOperationNotice(null);
     try {
       const res = await uploadImageToImgBB(file);
-      addProjectImage({
+      await addProjectImage({
         projectId: editingProject.id,
         imageUrl: res.url,
         altText: newImageCaption || `${editingProject.name} screenshot`,
@@ -99,10 +133,28 @@ export const AdminProjects: React.FC = () => {
         displayOrder: currentImages.length + 1,
       });
       setNewImageCaption('');
-    } catch (err) {
-      alert('Failed to upload project image.');
+      setOperationNotice('Project image uploaded and linked successfully.');
+    } catch (error) {
+      setOperationError(`Project image could not be saved: ${getErrorMessage(error)}`);
     } finally {
       setUploadingImage(false);
+      input.value = '';
+    }
+  };
+
+  const handleDeleteProject = async (project: Project) => {
+    if (!confirm(`Delete project ${project.name}?`)) return;
+
+    setDeletingProjectId(project.id);
+    setOperationError(null);
+    setOperationNotice(null);
+    try {
+      await deleteProject(project.id);
+      setOperationNotice('Project deleted successfully.');
+    } catch (error) {
+      setOperationError(`Project could not be deleted: ${getErrorMessage(error)}`);
+    } finally {
+      setDeletingProjectId(null);
     }
   };
 
@@ -119,12 +171,24 @@ export const AdminProjects: React.FC = () => {
         </div>
         <button
           onClick={startCreate}
+          disabled={savingProject || deletingProjectId !== null}
           className="px-4 py-2 text-xs font-semibold text-white bg-[#191C1E] hover:bg-[#2B2F34] rounded-xl transition-colors flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5 text-[#C59A4E]" />
           <span>Add New Project</span>
         </button>
       </div>
+
+      {operationError && (
+        <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+          {operationError}
+        </p>
+      )}
+      {operationNotice && (
+        <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+          {operationNotice}
+        </p>
+      )}
 
       {editingProject ? (
         <form onSubmit={handleSave} className="space-y-6 p-6 bg-[#FAF8F5] rounded-2xl border border-[#E6DECE]">
@@ -134,7 +198,11 @@ export const AdminProjects: React.FC = () => {
             </h3>
             <button
               type="button"
-              onClick={() => setEditingProject(null)}
+              onClick={() => {
+                setEditingProject(null);
+                setIsCreating(false);
+                setOperationError(null);
+              }}
               className="text-xs text-[#6B7280] hover:text-black"
             >
               Cancel
@@ -384,7 +452,16 @@ export const AdminProjects: React.FC = () => {
                     <img src={img.imageUrl} alt={img.caption || 'Screenshot'} className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => deleteProjectImage(img.id)}
+                      onClick={async () => {
+                        setOperationError(null);
+                        setOperationNotice(null);
+                        try {
+                          await deleteProjectImage(img.id);
+                          setOperationNotice('Project image deleted successfully.');
+                        } catch (error) {
+                          setOperationError(`Project image could not be deleted: ${getErrorMessage(error)}`);
+                        }
+                      }}
                       className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Remove image"
                     >
@@ -404,17 +481,22 @@ export const AdminProjects: React.FC = () => {
           <div className="flex justify-end gap-3 pt-4 border-t border-[#E6DECE]">
             <button
               type="button"
-              onClick={() => setEditingProject(null)}
+              onClick={() => {
+                setEditingProject(null);
+                setIsCreating(false);
+                setOperationError(null);
+              }}
               className="px-4 py-2 text-xs text-[#6B7280]"
             >
               Cancel
             </button>
             <button
               type="submit"
+              disabled={savingProject}
               className="px-6 py-2 text-xs font-semibold text-white bg-[#191C1E] rounded-xl flex items-center gap-1.5"
             >
               <Save className="w-3.5 h-3.5 text-[#C59A4E]" />
-              <span>Save Case Study</span>
+              <span>{savingProject ? 'Saving...' : 'Save Case Study'}</span>
             </button>
           </div>
         </form>
@@ -461,6 +543,8 @@ export const AdminProjects: React.FC = () => {
                   )}
                   <button
                     onClick={() => {
+                      setOperationError(null);
+                      setOperationNotice(null);
                       setIsCreating(false);
                       setEditingProject(p);
                     }}
@@ -470,13 +554,12 @@ export const AdminProjects: React.FC = () => {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Delete project ${p.name}?`)) deleteProject(p.id);
-                    }}
+                    onClick={() => handleDeleteProject(p)}
+                    disabled={deletingProjectId !== null}
                     className="p-1.5 text-red-600 hover:text-red-800 rounded-lg hover:bg-white border border-[#E6DECE]"
                     title="Delete Project"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingProjectId === p.id ? 'Deleting...' : <Trash2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>

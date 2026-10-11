@@ -68,7 +68,7 @@ export const projectsService = {
         project_challenges: project.projectChallenges,
         project_solution: project.projectSolution,
         project_outcome: project.projectOutcome,
-        partner_id: project.partnerId,
+        partner_id: project.partnerId || null,
         metrics: project.metrics,
         is_featured: project.isFeatured,
         is_active: project.isActive,
@@ -112,7 +112,7 @@ export const projectsService = {
   },
 
   async updateProject(id: string, project: Partial<Project>): Promise<void> {
-    if (!supabase) return;
+    if (!supabase) throw new Error('Supabase is not configured');
     const payload: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
@@ -141,28 +141,34 @@ export const projectsService = {
     if (project.isActive !== undefined) payload.is_active = project.isActive;
     if (project.displayOrder !== undefined) payload.display_order = project.displayOrder;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('projects')
       .update(payload)
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error) {
       console.error(`Error updating project ${id}:`, error);
       throw error;
     }
+    if (!data) throw new Error(`Project ${id} was not updated`);
   },
 
   async deleteProject(id: string): Promise<void> {
-    if (!supabase) return;
-    const { error } = await supabase
+    if (!supabase) throw new Error('Supabase is not configured');
+    const { data, error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error) {
       console.error(`Error deleting project ${id}:`, error);
       throw error;
     }
+    if (!data) throw new Error(`Project ${id} was not deleted`);
   },
 
   // Project Images
